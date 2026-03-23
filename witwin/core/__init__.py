@@ -1,6 +1,6 @@
 """Witwin Core - Shared geometry, materials, and scene utilities."""
 
-__version__ = "0.1.0"
+__version__ = "0.0.1"
 
 from .material import (
     FrequencyMaterialSample,
