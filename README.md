@@ -20,3 +20,9 @@ pip install witwin
 
 - [WiTwin Maxwell](../maxwell/README.md)
 - [WiTwin Radar](../radar/README.md)
+
+## Developer
+
+[![Asixa](https://github.com/Asixa.png)](https://github.com/Asixa)
+
+[Asixa](https://github.com/Asixa)
