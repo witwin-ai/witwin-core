@@ -18,8 +18,8 @@ pip install witwin
 
 ## Related Solvers
 
-- [WiTwin Maxwell](../maxwell/README.md)
-- [WiTwin Radar](../radar/README.md)
+- [WiTwin Maxwell](https://github.com/witwin-ai/witwin-maxwell)
+- [WiTwin Radar](https://github.com/witwin-ai/witwin-radar)
 
 ## Developer
 
