@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "witwin"
+version = "0.1.0"
+description = "Witwin - Multi-physics simulation platform"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+
+dependencies = [
+    "numpy>=1.24",
+    "torch>=2.0",
+]
+
+[project.optional-dependencies]
+maxwell = ["witwin-maxwell>=0.1.0"]
+radar   = ["witwin-radar>=0.1.0"]
+channel = ["witwin-channel>=0.1.0"]
+genesis = ["witwin-genesis>=0.1.0"]
+all     = [
+    "witwin-maxwell>=0.1.0",
+    "witwin-radar>=0.1.0",
+    "witwin-channel>=0.1.0",
+    "witwin-genesis>=0.1.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["witwin"]
