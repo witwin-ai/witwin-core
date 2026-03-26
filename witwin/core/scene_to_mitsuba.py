@@ -77,8 +77,8 @@ def create_mitsuba_mesh(
         has_vertex_texcoords=has_vertex_texcoords,
     )
     mesh_params = mi.traverse(mesh)
-    mesh_params["vertex_positions"] = dr.ravel(mi.TensorXf(vertices))
-    mesh_params["faces"] = dr.ravel(mi.TensorXu(faces))
+    mesh_params["vertex_positions"] = dr.ravel(dr.cuda.ad.TensorXf(vertices))
+    mesh_params["faces"] = dr.ravel(dr.cuda.ad.TensorXu(faces))
     mesh_params.update()
     mesh.set_bsdf(mi.load_dict(renderable.bsdf or bsdf))
     return mesh
@@ -134,5 +134,5 @@ def update_mitsuba_scene_vertices(
         if key not in params:
             continue
         vertices = renderable.vertices if not isinstance(renderable, MitsubaRenderable) else renderable.vertices
-        params[key] = dr.ravel(mi.TensorXf(_as_vertices_array(vertices)))
+        params[key] = dr.ravel(dr.cuda.ad.TensorXf(_as_vertices_array(vertices)))
     params.update()
