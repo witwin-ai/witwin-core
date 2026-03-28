@@ -20,6 +20,30 @@ def _coerce_nonnegative(value: float, *, name: str) -> float:
     return scalar
 
 
+def _coerce_differentiable_scalar(value: Any, *, name: str) -> Any:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return value
+
+
+def _coerce_differentiable_nonnegative(value: Any, *, name: str) -> Any:
+    try:
+        scalar = float(value)
+    except (TypeError, ValueError):
+        return value
+    if scalar < 0.0:
+        raise ValueError(f"{name} must be >= 0.")
+    return scalar
+
+
+def _is_numeric_close(value: Any, target: float) -> bool:
+    try:
+        return bool(np.isclose(float(value), target))
+    except (TypeError, ValueError):
+        return False
+
+
 @dataclass(frozen=True)
 class MaterialCapabilities:
     conductive: bool = False
@@ -111,6 +135,76 @@ class Material(MaterialSpec):
             eps_r=eps_r,
             mu_r=self.mu_r,
             sigma_e=self.sigma_e,
+        )
+
+
+@dataclass(frozen=True, init=False)
+class DifferentiableMaterial(MaterialSpec):
+    eps_r: Any
+    mu_r: Any
+    sigma_e: Any
+    name: str | None
+
+    def __init__(
+        self,
+        eps_r: Any = 1.0,
+        mu_r: Any = 1.0,
+        sigma_e: Any = 0.0,
+        name: str | None = None,
+    ):
+        object.__setattr__(self, "eps_r", _coerce_differentiable_scalar(eps_r, name="eps_r"))
+        object.__setattr__(self, "mu_r", _coerce_differentiable_scalar(mu_r, name="mu_r"))
+        object.__setattr__(self, "sigma_e", _coerce_differentiable_nonnegative(sigma_e, name="sigma_e"))
+        object.__setattr__(self, "name", None if name is None else str(name))
+
+    def capabilities(self) -> MaterialCapabilities:
+        return MaterialCapabilities(
+            conductive=not _is_numeric_close(self.sigma_e, 0.0),
+            magnetic=not _is_numeric_close(self.mu_r, 1.0),
+            anisotropic=False,
+            dispersive=False,
+        )
+
+    def evaluate_static(self) -> StaticMaterialSample:
+        return StaticMaterialSample(
+            eps_r=self.eps_r,
+            mu_r=self.mu_r,
+            sigma_e=self.sigma_e,
+        )
+
+    def evaluate_at_frequency(self, frequency: float) -> FrequencyMaterialSample:
+        resolved_frequency = float(frequency)
+        if resolved_frequency < 0.0:
+            raise ValueError("frequency must be >= 0.")
+        if resolved_frequency == 0.0:
+            if not _is_numeric_close(self.sigma_e, 0.0):
+                try:
+                    scalar_sigma = float(self.sigma_e)
+                except (TypeError, ValueError):
+                    scalar_sigma = None
+                if scalar_sigma is not None:
+                    raise ValueError("Conductive materials require frequency > 0.")
+            return FrequencyMaterialSample(
+                eps_r=self.eps_r,
+                mu_r=self.mu_r,
+                sigma_e=self.sigma_e,
+            )
+
+        try:
+            eps_r = complex(
+                float(self.eps_r),
+                -float(self.sigma_e) / (2.0 * np.pi * resolved_frequency * VACUUM_PERMITTIVITY),
+            )
+            mu_r = float(self.mu_r)
+            sigma_e = float(self.sigma_e)
+        except (TypeError, ValueError):
+            eps_r = self.eps_r
+            mu_r = self.mu_r
+            sigma_e = self.sigma_e
+        return FrequencyMaterialSample(
+            eps_r=eps_r,
+            mu_r=mu_r,
+            sigma_e=sigma_e,
         )
 
 
