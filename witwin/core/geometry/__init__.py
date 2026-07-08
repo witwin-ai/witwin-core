@@ -2,10 +2,10 @@
 
 from .base import GeometryBase
 from .mesh import Mesh
-from .primitives import Box, Cone, Cylinder, Ellipsoid, HollowBox, Prism, Pyramid, Sphere, Torus
+from .primitives import Box, ComplexPolySlab, Cone, Cylinder, Ellipsoid, HollowBox, PolySlab, Prism, Pyramid, Sphere, Torus
 from .smpl import SMPLBody
 
-Geometry = Box | Sphere | Cylinder | Cone | Ellipsoid | Pyramid | Prism | Torus | HollowBox | Mesh | SMPLBody
+Geometry = Box | Sphere | Cylinder | Cone | Ellipsoid | Pyramid | Prism | PolySlab | ComplexPolySlab | Torus | HollowBox | Mesh | SMPLBody
 
 __all__ = [
     "GeometryBase",
@@ -16,6 +16,8 @@ __all__ = [
     "Ellipsoid",
     "Pyramid",
     "Prism",
+    "PolySlab",
+    "ComplexPolySlab",
     "Torus",
     "HollowBox",
     "Mesh",
