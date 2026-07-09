@@ -6,7 +6,7 @@ import torch
 from witwin.core import Box, Cone, Cylinder, Ellipsoid, HollowBox, Mesh, Prism, Pyramid, Sphere, Torus
 from witwin.core.geometry import ComplexPolySlab, PolySlab
 from witwin.core.geometry.mesh_sdf import (
-    _slang_mesh_sdf_available,
+    _mesh_sdf_available,
     _triangle_mesh_smooth_signed_distance_torch,
     _triangle_mesh_unsigned_distance_torch,
     triangle_mesh_smooth_signed_distance,
@@ -90,9 +90,9 @@ def _grid_plane_mesh(*, resolution=24, size=1.0):
 
 def _require_cuda_mesh_sdf():
     if not torch.cuda.is_available():
-        pytest.skip("CUDA is required for the Slang mesh SDF path.")
-    if not _slang_mesh_sdf_available():
-        pytest.skip("slangtorch is required for the Slang mesh SDF path.")
+        pytest.skip("CUDA is required for the native mesh SDF path.")
+    if not _mesh_sdf_available():
+        pytest.skip("Native CUDA mesh SDF extension is required for this path.")
 
 
 @pytest.mark.parametrize(
