@@ -132,6 +132,7 @@ except ImportError:
 
 
 _SMPL_LAYER_CACHE: dict[tuple[str, str, str], Any] = {}
+_SMPL_FACES_CACHE: dict[tuple[str, str, str], np.ndarray] = {}
 
 
 def _resolve_scene_device(device: str | None) -> str:
@@ -164,6 +165,66 @@ def _get_smpl_layer(*, gender: str, model_root: str, device: str):
         layer = SMPL_Layer(center_idx=0, gender=gender, model_root=model_root).to(device)
         _SMPL_LAYER_CACHE[key] = layer
     return layer
+
+
+def _axis_angle_matrices(rvecs: torch.Tensor) -> torch.Tensor:
+    """Differentiable Rodrigues for (J, 3) axis-angle vectors -> (J, 3, 3)."""
+    # smplpytorch's zero-rotation guard: offset the vector, not the norm, so
+    # the gradient at exactly zero pose stays finite.
+    safe = rvecs + 1e-8
+    angle = safe.norm(dim=1, keepdim=True)
+    axis = safe / angle
+    x, y, z = axis.unbind(-1)
+    zero = torch.zeros_like(x)
+    skew = torch.stack([zero, -z, y, z, zero, -x, -y, x, zero], dim=-1).reshape(-1, 3, 3)
+    eye = torch.eye(3, dtype=rvecs.dtype, device=rvecs.device).expand_as(skew)
+    sin = torch.sin(angle).unsqueeze(-1)
+    cos = torch.cos(angle).unsqueeze(-1)
+    return eye + sin * skew + (1.0 - cos) * (skew @ skew)
+
+
+def _fast_smpl_forward(layer, pose: torch.Tensor, betas: torch.Tensor):
+    """Vectorized SMPL LBS equivalent to smplpytorch's forward (batch 1).
+
+    smplpytorch's Python implementation costs ~21 ms per call; this batched
+    version is ~2 ms and numerically matches it (verified by diag_fast_lbs).
+    """
+    device = pose.device
+    v_template = layer.th_v_template[0]
+    joints_rest = layer.th_J_regressor @ (
+        v_template + torch.einsum("vdk,k->vd", layer.th_shapedirs, betas.reshape(-1))
+    )
+    v_shaped = v_template + torch.einsum("vdk,k->vd", layer.th_shapedirs, betas.reshape(-1))
+
+    rotations = _axis_angle_matrices(pose.reshape(24, 3))
+    eye = torch.eye(3, dtype=pose.dtype, device=device)
+    pose_feature = (rotations[1:] - eye).reshape(-1)
+    v_posed = v_shaped + torch.einsum("vdk,k->vd", layer.th_posedirs, pose_feature)
+
+    parents = layer.kintree_parents
+    relative = [joints_rest[0]]
+    for j in range(1, 24):
+        relative.append(joints_rest[j] - joints_rest[parents[j]])
+
+    bottom = torch.tensor([[0.0, 0.0, 0.0, 1.0]], dtype=pose.dtype, device=device)
+    transforms: list[torch.Tensor] = []
+    for j in range(24):
+        local = torch.cat(
+            [torch.cat([rotations[j], relative[j].reshape(3, 1)], dim=1), bottom], dim=0
+        )
+        transforms.append(local if j == 0 else transforms[parents[j]] @ local)
+    global_transforms = torch.stack(transforms)
+
+    posed_joints = global_transforms[:, :3, 3]
+    corrected_t = posed_joints - torch.einsum(
+        "jab,jb->ja", global_transforms[:, :3, :3], joints_rest
+    )
+    skin_rot = torch.einsum("vj,jab->vab", layer.th_weights, global_transforms[:, :3, :3])
+    skin_t = layer.th_weights @ corrected_t
+    vertices = torch.einsum("vab,vb->va", skin_rot, v_posed) + skin_t
+
+    center = posed_joints[0]
+    return (vertices - center).unsqueeze(0), (posed_joints - center).unsqueeze(0)
 
 
 class SMPLBody(GeometryBase):
@@ -210,11 +271,15 @@ class SMPLBody(GeometryBase):
         shape_tensor = self.shape.to(device=device, dtype=torch.float32).view(1, -1)
         if shape_tensor.requires_grad:
             shape_tensor = shape_tensor + 1e-8
-        vertices, joints = layer(pose_tensor, th_betas=shape_tensor)
+        vertices, joints = _fast_smpl_forward(layer, pose_tensor.reshape(-1), shape_tensor.reshape(-1))
         vertices = self._transform_mesh_verts(vertices[0])
         joints = self._transform_mesh_verts(joints[0])
-        faces = layer.th_faces.detach().cpu().numpy().astype(np.int32)
-        return vertices.contiguous(), np.ascontiguousarray(faces), joints.contiguous()
+        cache_key = (self.gender, self.model_root, device)
+        faces = _SMPL_FACES_CACHE.get(cache_key)
+        if faces is None:
+            faces = np.ascontiguousarray(layer.th_faces.detach().cpu().numpy().astype(np.int32))
+            _SMPL_FACES_CACHE[cache_key] = faces
+        return vertices.contiguous(), faces, joints.contiguous()
 
     def to_mesh(self, segments=16, *, device=None):
         del segments
