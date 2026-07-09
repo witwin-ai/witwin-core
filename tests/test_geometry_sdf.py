@@ -4,8 +4,9 @@ import pytest
 import torch
 
 from witwin.core import Box, Cone, Cylinder, Ellipsoid, HollowBox, Mesh, Prism, Pyramid, Sphere, Torus
+from witwin.core.geometry import ComplexPolySlab, PolySlab
 from witwin.core.geometry.mesh_sdf import (
-    _slang_mesh_sdf_available,
+    _mesh_sdf_available,
     _triangle_mesh_smooth_signed_distance_torch,
     _triangle_mesh_unsigned_distance_torch,
     triangle_mesh_smooth_signed_distance,
@@ -89,9 +90,9 @@ def _grid_plane_mesh(*, resolution=24, size=1.0):
 
 def _require_cuda_mesh_sdf():
     if not torch.cuda.is_available():
-        pytest.skip("CUDA is required for the Slang mesh SDF path.")
-    if not _slang_mesh_sdf_available():
-        pytest.skip("slangtorch is required for the Slang mesh SDF path.")
+        pytest.skip("CUDA is required for the native mesh SDF path.")
+    if not _mesh_sdf_available():
+        pytest.skip("Native CUDA mesh SDF extension is required for this path.")
 
 
 @pytest.mark.parametrize(
@@ -151,6 +152,39 @@ def _require_cuda_mesh_sdf():
             (0.5, 0.0, 0.0),
             (0.7, 0.0, 0.0),
         ),
+        (
+            PolySlab(
+                vertices=[(-0.5, -0.5), (0.5, -0.5), (0.5, 0.5), (-0.5, 0.5)],
+                bounds=(-0.5, 0.5),
+                axis="z",
+            ),
+            (0.0, 0.0, 0.0),
+            (0.5, 0.0, 0.0),
+            (0.7, 0.0, 0.0),
+        ),
+        (
+            # Non-convex L-shape: the notch quadrant must be outside.
+            PolySlab(
+                vertices=[(-0.5, -0.5), (0.5, -0.5), (0.5, 0.0), (0.0, 0.0), (0.0, 0.5), (-0.5, 0.5)],
+                bounds=(-0.5, 0.5),
+                axis="z",
+            ),
+            (-0.25, -0.25, 0.0),
+            (0.5, -0.25, 0.0),
+            (0.25, 0.25, 0.0),
+        ),
+        (
+            ComplexPolySlab(
+                loops=[
+                    [(-0.5, -0.5), (0.5, -0.5), (0.5, 0.5), (-0.5, 0.5)],
+                    [(-0.2, -0.2), (0.2, -0.2), (0.2, 0.2), (-0.2, 0.2)],
+                ],
+                bounds=(-0.5, 0.5),
+            ),
+            (0.35, 0.0, 0.0),
+            (0.5, 0.0, 0.0),
+            (0.0, 0.0, 0.0),
+        ),
     ],
 )
 def test_primitive_signed_distance_has_expected_sign(geometry, inside_point, surface_point, outside_point):
@@ -180,6 +214,16 @@ def test_primitive_signed_distance_has_expected_sign(geometry, inside_point, sur
         (Cone(radius=0.4, height=1.0, axis="z"), (0.0, 0.0, 0.5), (0.2, 0.0, 0.5), (0.3, 0.0, 0.5)),
         (Pyramid(base_size=1.0, height=1.0, axis="z"), (0.0, 0.0, 0.5), (0.25, 0.0, 0.5), (0.35, 0.0, 0.5)),
         (Prism(radius=0.4, height=1.0, num_sides=5, axis="z"), (0.0, 0.0, 0.0), (0.4, 0.0, 0.0), (0.6, 0.0, 0.0)),
+        (
+            PolySlab(
+                vertices=[(-0.4, -0.4), (0.4, -0.4), (0.4, 0.4), (-0.4, 0.4)],
+                bounds=(-0.5, 0.5),
+                axis="z",
+            ),
+            (0.0, 0.0, 0.0),
+            (0.4, 0.0, 0.0),
+            (0.7, 0.0, 0.0),
+        ),
     ],
 )
 def test_primitive_occupancy_is_monotone_and_bounded(geometry, inside_point, boundary_point, outside_point):
@@ -325,6 +369,27 @@ def test_prism_occupancy_has_gradients_for_position_radius_height_and_rotation()
         assert grad is not None
         assert torch.isfinite(grad)
         assert abs(grad.item()) > 1.0e-6
+
+
+def test_polyslab_occupancy_has_gradients_for_vertices_bounds_and_sidewall_angle():
+    xx, yy, zz = _asymmetric_grid()
+    vertices = torch.nn.Parameter(
+        torch.tensor([[-0.31, -0.24], [0.29, -0.24], [0.29, 0.26], [-0.31, 0.26]], dtype=torch.float32)
+    )
+    bounds = torch.nn.Parameter(torch.tensor([-0.28, 0.17], dtype=torch.float32))
+    sidewall_angle = torch.nn.Parameter(torch.tensor(0.10, dtype=torch.float32))
+
+    geometry = PolySlab(vertices, bounds, axis="z", sidewall_angle=sidewall_angle)
+    loss = geometry.to_mask(xx, yy, zz, beta=0.06).sum()
+    loss.backward()
+
+    for grad in (vertices.grad, bounds.grad):
+        assert grad is not None
+        assert torch.all(torch.isfinite(grad))
+        assert torch.any(grad.abs() > 1.0e-6)
+    assert sidewall_angle.grad is not None
+    assert torch.isfinite(sidewall_angle.grad)
+    assert abs(sidewall_angle.grad.item()) > 1.0e-6
 
 
 def test_mesh_signed_distance_matches_box_sign_for_closed_cube():

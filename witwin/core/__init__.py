@@ -3,6 +3,7 @@
 __version__ = "0.0.1"
 
 from .material import (
+    DifferentiableMaterial,
     FrequencyMaterialSample,
     Material,
     MaterialCapabilities,
@@ -46,6 +47,7 @@ __all__ = [
     "Box", "Sphere", "Cylinder", "Cone", "Ellipsoid",
     "Pyramid", "Prism", "Torus", "HollowBox",
     "Material",
+    "DifferentiableMaterial",
     "MaterialCapabilities",
     "MaterialSpec",
     "Mesh",

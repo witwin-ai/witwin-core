@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "witwin"
-version = "0.0.1"
+version = "0.0.2"
 description = "Witwin - Multi-physics simulation platform"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -29,3 +29,14 @@ all     = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["witwin"]
+artifacts = [
+    "witwin/core/geometry/cuda/**/*.cpp",
+    "witwin/core/geometry/cuda/**/*.cu",
+    "witwin/core/geometry/cuda/**/*.cuh",
+    "witwin/core/geometry/cuda/**/*.h",
+    "witwin/core/geometry/cuda/prebuilt/*.pyd",
+    "witwin/core/geometry/cuda/prebuilt/*.so",
+]
+
+[tool.hatch.build.hooks.custom]
+path = "hatch_build.py"

@@ -1,18 +1,16 @@
-"""Torch-native and Slang-backed triangle-mesh distance helpers."""
+"""Torch-native and native-CUDA triangle-mesh distance helpers."""
 
 from __future__ import annotations
 
 import math
-import os
-import sys
-from pathlib import Path
-from typing import Any
 
 import numpy as np
 import torch
 
 
-_MESH_SDF_MODULE_CACHE: dict[str, Any] = {}
+_MESH_SDF_MODULE_UNSET = object()
+_MESH_SDF_MODULE: object | None = _MESH_SDF_MODULE_UNSET
+_MESH_SDF_BUILD_ERROR: str | None = None
 _MESH_SDF_BVH_LEAF_SIZE = 8
 _MESH_SDF_BVH_MIN_TRIANGLES = 1024
 
@@ -25,42 +23,44 @@ def _safe_signed_denom(value: torch.Tensor, eps: float) -> torch.Tensor:
     return torch.where(value >= 0.0, value.clamp_min(eps), value.clamp_max(-eps))
 
 
-def _ensure_current_env_on_path() -> None:
-    scripts_dir = os.path.join(os.path.dirname(sys.executable), "Scripts")
-    if not os.path.isdir(scripts_dir):
-        return
-    current_path = os.environ.get("PATH", "")
-    path_entries = current_path.split(os.pathsep) if current_path else []
-    if scripts_dir not in path_entries:
-        os.environ["PATH"] = scripts_dir + os.pathsep + current_path
-
-
 def _get_mesh_sdf_module():
-    try:
-        import slangtorch
-    except ImportError:
-        return None
+    """Return the native CUDA mesh-SDF module, or None if it cannot be built.
 
-    _ensure_current_env_on_path()
-    slang_path = str(Path(__file__).resolve().parents[1] / "mesh_sdf.slang")
-    module = _MESH_SDF_MODULE_CACHE.get(slang_path)
-    if module is None:
-        module = slangtorch.loadModule(slang_path)
-        _MESH_SDF_MODULE_CACHE[slang_path] = module
-    return module
+    The module is compiled once via ``torch.utils.cpp_extension`` and cached.
+    A build failure (missing toolchain, no CUDA) is recorded and downgraded to
+    ``None`` so callers transparently fall back to the Torch-native path.
+    """
+    global _MESH_SDF_MODULE, _MESH_SDF_BUILD_ERROR
+    if _MESH_SDF_MODULE is _MESH_SDF_MODULE_UNSET:
+        if not torch.cuda.is_available():
+            _MESH_SDF_MODULE = None
+        else:
+            try:
+                from .cuda import get_native_mesh_sdf_module
+
+                _MESH_SDF_MODULE = get_native_mesh_sdf_module()
+            except Exception as exc:  # noqa: BLE001 - degrade to Torch fallback
+                _MESH_SDF_BUILD_ERROR = f"{type(exc).__name__}: {exc}"
+                _MESH_SDF_MODULE = None
+    return _MESH_SDF_MODULE
 
 
-def _slang_mesh_sdf_available() -> bool:
+def _mesh_sdf_available() -> bool:
     return _get_mesh_sdf_module() is not None
 
 
-def _should_use_slang(points: torch.Tensor, vertices: torch.Tensor) -> bool:
+def _mesh_sdf_build_error() -> str | None:
+    """Return the last native-CUDA build error message, if any."""
+    return _MESH_SDF_BUILD_ERROR
+
+
+def _should_use_native(points: torch.Tensor, vertices: torch.Tensor) -> bool:
     return (
         points.device.type == "cuda"
         and vertices.device.type == "cuda"
         and points.dtype == torch.float32
         and vertices.dtype == torch.float32
-        and _slang_mesh_sdf_available()
+        and _mesh_sdf_available()
     )
 
 
@@ -340,13 +340,13 @@ def _triangle_mesh_winding_angle_torch(
     )
 
 
-def _launch_slang_unsigned_distance(
+def _launch_native_unsigned_distance(
     triangles: torch.Tensor,
     points: torch.Tensor,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     module = _get_mesh_sdf_module()
     if module is None:
-        raise RuntimeError("Mesh SDF Slang module is not available.")
+        raise RuntimeError("Native CUDA mesh SDF module is not available.")
     if points.shape[0] == 0:
         empty_f = torch.empty((0,), device=points.device, dtype=torch.float32)
         empty_i = torch.empty((0,), device=points.device, dtype=torch.int32)
@@ -371,14 +371,14 @@ def _launch_slang_unsigned_distance(
     return distances, closest
 
 
-def _launch_slang_unsigned_distance_bvh(
+def _launch_native_unsigned_distance_bvh(
     triangles: torch.Tensor,
     points: torch.Tensor,
     bvh: dict[str, torch.Tensor],
 ) -> tuple[torch.Tensor, torch.Tensor]:
     module = _get_mesh_sdf_module()
     if module is None:
-        raise RuntimeError("Mesh SDF Slang module is not available.")
+        raise RuntimeError("Native CUDA mesh SDF module is not available.")
     if points.shape[0] == 0:
         empty_f = torch.empty((0,), device=points.device, dtype=torch.float32)
         empty_i = torch.empty((0,), device=points.device, dtype=torch.int32)
@@ -410,7 +410,7 @@ def _launch_slang_unsigned_distance_bvh(
     return distances, closest
 
 
-def _launch_slang_parity_sign_bvh(
+def _launch_native_parity_sign_bvh(
     triangles: torch.Tensor,
     points: torch.Tensor,
     bvh: dict[str, torch.Tensor],
@@ -419,7 +419,7 @@ def _launch_slang_parity_sign_bvh(
 ) -> torch.Tensor:
     module = _get_mesh_sdf_module()
     if module is None:
-        raise RuntimeError("Mesh SDF Slang module is not available.")
+        raise RuntimeError("Native CUDA mesh SDF module is not available.")
     if points.shape[0] == 0:
         return torch.empty((0,), device=points.device, dtype=torch.int32)
 
@@ -444,13 +444,13 @@ def _launch_slang_parity_sign_bvh(
     return inside
 
 
-def _launch_slang_distance_and_winding(
+def _launch_native_distance_and_winding(
     triangles: torch.Tensor,
     points: torch.Tensor,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     module = _get_mesh_sdf_module()
     if module is None:
-        raise RuntimeError("Mesh SDF Slang module is not available.")
+        raise RuntimeError("Native CUDA mesh SDF module is not available.")
     if points.shape[0] == 0:
         empty_f = torch.empty((0,), device=points.device, dtype=torch.float32)
         empty_i = torch.empty((0,), device=points.device, dtype=torch.int32)
@@ -483,9 +483,9 @@ def triangle_mesh_unsigned_distance_static_bvh(
     bvh: dict[str, torch.Tensor] | None,
 ) -> torch.Tensor:
     if bvh is None:
-        distances, _closest = _launch_slang_unsigned_distance(triangles, points)
+        distances, _closest = _launch_native_unsigned_distance(triangles, points)
     else:
-        distances, _closest = _launch_slang_unsigned_distance_bvh(triangles, points, bvh)
+        distances, _closest = _launch_native_unsigned_distance_bvh(triangles, points, bvh)
     return distances.to(dtype=points.dtype)
 
 
@@ -495,15 +495,15 @@ def triangle_mesh_signed_distance_static_bvh(
     bvh: dict[str, torch.Tensor] | None,
 ) -> torch.Tensor:
     if bvh is None:
-        distances, _winding_angles, _closest = _launch_slang_distance_and_winding(triangles, points)
+        distances, _winding_angles, _closest = _launch_native_distance_and_winding(triangles, points)
         parity_inside = torch.signbit(_signed_distance_from_unsigned_and_winding(
             distances.to(dtype=points.dtype),
             _winding_angles.to(dtype=points.dtype),
             winding_beta=0.5,
         )).to(dtype=torch.int32)
     else:
-        distances, _closest = _launch_slang_unsigned_distance_bvh(triangles, points, bvh)
-        parity_inside = _launch_slang_parity_sign_bvh(triangles, points, bvh)
+        distances, _closest = _launch_native_unsigned_distance_bvh(triangles, points, bvh)
+        parity_inside = _launch_native_parity_sign_bvh(triangles, points, bvh)
 
     sign = torch.where(
         parity_inside.to(dtype=torch.bool),
@@ -513,7 +513,7 @@ def triangle_mesh_signed_distance_static_bvh(
     return distances.to(dtype=points.dtype) * sign
 
 
-def _launch_slang_unsigned_backward(
+def _launch_native_unsigned_backward(
     triangles: torch.Tensor,
     points: torch.Tensor,
     closest_triangle_index: torch.Tensor,
@@ -521,7 +521,7 @@ def _launch_slang_unsigned_backward(
 ) -> tuple[torch.Tensor, torch.Tensor]:
     module = _get_mesh_sdf_module()
     if module is None:
-        raise RuntimeError("Mesh SDF Slang module is not available.")
+        raise RuntimeError("Native CUDA mesh SDF module is not available.")
     if points.shape[0] == 0:
         return torch.zeros_like(triangles), torch.zeros_like(points)
 
@@ -542,7 +542,7 @@ def _launch_slang_unsigned_backward(
     return grad_triangles, grad_points
 
 
-def _launch_slang_distance_and_winding_backward(
+def _launch_native_distance_and_winding_backward(
     triangles: torch.Tensor,
     points: torch.Tensor,
     closest_triangle_index: torch.Tensor,
@@ -551,7 +551,7 @@ def _launch_slang_distance_and_winding_backward(
 ) -> tuple[torch.Tensor, torch.Tensor]:
     module = _get_mesh_sdf_module()
     if module is None:
-        raise RuntimeError("Mesh SDF Slang module is not available.")
+        raise RuntimeError("Native CUDA mesh SDF module is not available.")
     if points.shape[0] == 0:
         return torch.zeros_like(triangles), torch.zeros_like(points)
 
@@ -576,14 +576,14 @@ def _launch_slang_distance_and_winding_backward(
 class _TriangleMeshUnsignedDistanceFunction(torch.autograd.Function):
     @staticmethod
     def forward(ctx, triangles: torch.Tensor, points: torch.Tensor) -> torch.Tensor:
-        distances, closest_triangle_index = _launch_slang_unsigned_distance(triangles, points)
+        distances, closest_triangle_index = _launch_native_unsigned_distance(triangles, points)
         ctx.save_for_backward(triangles.detach(), points.detach(), closest_triangle_index)
         return distances
 
     @staticmethod
     def backward(ctx, grad_output: torch.Tensor):
         triangles, points, closest_triangle_index = ctx.saved_tensors
-        grad_triangles, grad_points = _launch_slang_unsigned_backward(
+        grad_triangles, grad_points = _launch_native_unsigned_backward(
             triangles,
             points,
             closest_triangle_index,
@@ -595,7 +595,7 @@ class _TriangleMeshUnsignedDistanceFunction(torch.autograd.Function):
 class _TriangleMeshWindingAngleFunction(torch.autograd.Function):
     @staticmethod
     def forward(ctx, triangles: torch.Tensor, points: torch.Tensor) -> torch.Tensor:
-        _unsigned_distance, winding_angle, closest_triangle_index = _launch_slang_distance_and_winding(triangles, points)
+        _unsigned_distance, winding_angle, closest_triangle_index = _launch_native_distance_and_winding(triangles, points)
         ctx.save_for_backward(triangles.detach(), points.detach(), closest_triangle_index)
         return winding_angle
 
@@ -603,7 +603,7 @@ class _TriangleMeshWindingAngleFunction(torch.autograd.Function):
     def backward(ctx, grad_output: torch.Tensor):
         triangles, points, closest_triangle_index = ctx.saved_tensors
         zeros = torch.zeros_like(grad_output, device=triangles.device, dtype=torch.float32)
-        grad_triangles, grad_points = _launch_slang_distance_and_winding_backward(
+        grad_triangles, grad_points = _launch_native_distance_and_winding_backward(
             triangles,
             points,
             closest_triangle_index,
@@ -616,7 +616,7 @@ class _TriangleMeshWindingAngleFunction(torch.autograd.Function):
 class _TriangleMeshSignedDistanceFunction(torch.autograd.Function):
     @staticmethod
     def forward(ctx, triangles: torch.Tensor, points: torch.Tensor, winding_beta: float) -> torch.Tensor:
-        unsigned_distance, winding_angle, closest_triangle_index = _launch_slang_distance_and_winding(triangles, points)
+        unsigned_distance, winding_angle, closest_triangle_index = _launch_native_distance_and_winding(triangles, points)
         signed_distance = _signed_distance_from_unsigned_and_winding(unsigned_distance, winding_angle, winding_beta)
         ctx.winding_beta = float(winding_beta)
         ctx.save_for_backward(
@@ -642,7 +642,7 @@ class _TriangleMeshSignedDistanceFunction(torch.autograd.Function):
             * (-(1.0 - tanh_shifted.square()) / beta)
             * torch.sign(winding_angle)
         )
-        grad_triangles, grad_points = _launch_slang_distance_and_winding_backward(
+        grad_triangles, grad_points = _launch_native_distance_and_winding_backward(
             triangles,
             points,
             closest_triangle_index,
@@ -662,10 +662,10 @@ def triangle_mesh_unsigned_distance(
     _triangles: torch.Tensor | None = None,
 ) -> torch.Tensor:
     triangles = _indexed_triangles(vertices, faces) if _triangles is None else _triangles
-    if _should_use_slang(points, vertices):
+    if _should_use_native(points, vertices):
         if torch.is_grad_enabled() and (triangles.requires_grad or points.requires_grad):
             return _TriangleMeshUnsignedDistanceFunction.apply(triangles, points.contiguous())
-        primal, _closest_triangle_index = _launch_slang_unsigned_distance(triangles, points)
+        primal, _closest_triangle_index = _launch_native_unsigned_distance(triangles, points)
         return primal.to(dtype=points.dtype)
 
     return _triangle_mesh_unsigned_distance_torch_from_triangles(
@@ -686,10 +686,10 @@ def triangle_mesh_winding_angle(
     _triangles: torch.Tensor | None = None,
 ) -> torch.Tensor:
     triangles = _indexed_triangles(vertices, faces) if _triangles is None else _triangles
-    if _should_use_slang(points, vertices):
+    if _should_use_native(points, vertices):
         if torch.is_grad_enabled() and (triangles.requires_grad or points.requires_grad):
             return _TriangleMeshWindingAngleFunction.apply(triangles, points.contiguous())
-        _unsigned_distance, winding_angle, _closest_triangle_index = _launch_slang_distance_and_winding(triangles, points)
+        _unsigned_distance, winding_angle, _closest_triangle_index = _launch_native_distance_and_winding(triangles, points)
         return winding_angle.to(dtype=points.dtype)
 
     return _triangle_mesh_winding_angle_torch_from_triangles(
@@ -737,10 +737,10 @@ def triangle_mesh_smooth_signed_distance(
     _triangles: torch.Tensor | None = None,
 ) -> torch.Tensor:
     triangles = _indexed_triangles(vertices, faces) if _triangles is None else _triangles
-    if _should_use_slang(points, vertices):
+    if _should_use_native(points, vertices):
         if torch.is_grad_enabled() and (triangles.requires_grad or points.requires_grad):
             return _TriangleMeshSignedDistanceFunction.apply(triangles, points.contiguous(), float(winding_beta))
-        primal_unsigned_distance, primal_winding_angle, _closest_triangle_index = _launch_slang_distance_and_winding(
+        primal_unsigned_distance, primal_winding_angle, _closest_triangle_index = _launch_native_distance_and_winding(
             triangles,
             points,
         )
