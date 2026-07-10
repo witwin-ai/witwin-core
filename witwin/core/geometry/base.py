@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Protocol, runtime_checkable
+
 import numpy as np
 import torch
 
@@ -134,6 +136,16 @@ def occupancy_from_signed_distance(signed_distance: torch.Tensor, *, xx, yy, zz,
     beta_tensor = _resolve_beta(beta, xx, yy, zz, reference=signed_distance)
     occupancy = 0.5 * (1.0 - torch.tanh((signed_distance - offset_tensor) / beta_tensor))
     return occupancy.clamp(0.0, 1.0)
+
+
+@runtime_checkable
+class GeometrySpec(Protocol):
+    """Minimal geometry contract consumed by solver-specific scenes."""
+
+    kind: str
+
+    def to_mesh(self, segments: int = 16) -> tuple:
+        ...
 
 
 class GeometryBase:

@@ -1,8 +1,8 @@
 // Native CUDA triangle-mesh distance / winding / parity kernels.
 //
-// Direct port of the former ``mesh_sdf.slang`` module. The forward kernels
-// reproduce the Slang closest-point (Ericson) and solid-angle math verbatim;
-// the backward kernels replace Slang autodiff with hand-derived analytic
+// Direct port of the former mesh-SDF JIT module. The forward kernels
+// reproduce its closest-point (Ericson) and solid-angle math verbatim;
+// the backward kernels replace generated autodiff with hand-derived analytic
 // gradients. Every closest-point feature (vertex / edge / face) contributes
 // gradients to the triangle vertices through the barycentric weights of the
 // closest point, so grad_p == -(grad_a + grad_b + grad_c) holds by
@@ -57,7 +57,7 @@ __device__ __forceinline__ float3 read_vec3(const float* __restrict__ data, int 
   return make_float3(v[0], v[1], v[2]);
 }
 
-// Closest point on triangle (a, b, c) to p (Ericson, matching mesh_sdf.slang).
+// Closest point on triangle (a, b, c) to p (Ericson, matching the reference implementation).
 // Returns the squared distance and the barycentric weights (la, lb, lc) of the
 // closest point so the backward pass can distribute vertex gradients.
 __device__ __forceinline__ float closest_point_barycentric(

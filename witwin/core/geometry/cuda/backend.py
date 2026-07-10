@@ -1,6 +1,6 @@
 """Loader for the native CUDA mesh-SDF extension.
 
-Exposes a module object that is call-compatible with the former SlangTorch
+Exposes a module object that is call-compatible with the former JIT-kernel
 module: ``module.<kernelName>(**kwargs).launchRaw(blockSize=..., gridSize=...)``.
 The kernels compute their own launch grid, so ``launchRaw`` ignores the block /
 grid hints and simply dispatches the compiled function.

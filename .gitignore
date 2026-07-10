@@ -171,9 +171,6 @@ venv.bak/
 
 # mkdocs documentation
 /site
-.slangtorch_cache/
-.fdtd_runtime_*.slang
-.adjoint_kernels_runtime_*.slang
 *.png
 *.npy
 *.npz

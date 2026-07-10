@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "witwin"
-version = "0.0.2"
-description = "Witwin - Multi-physics simulation platform"
+version = "0.1.0"
+description = "Witwin shared geometry, material, and structure contracts"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -16,15 +16,15 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-maxwell = ["witwin-maxwell>=0.0.1"]
-radar   = ["witwin-radar>=0.0.1"]
-channel = ["witwin-channel>=0.0.1"]
-genesis = ["witwin-genesis>=0.0.1"]
+maxwell = ["witwin-maxwell>=0.2,<0.3"]
+radar   = ["witwin-radar>=0.2,<0.3"]
+channel = ["witwin-channel>=0.1,<0.2"]
+genesis = ["witwin-genesis>=0.1,<0.2"]
 all     = [
-    "witwin-maxwell>=0.0.1",
-    "witwin-radar>=0.0.1",
-    "witwin-channel>=0.0.1",
-    "witwin-genesis>=0.0.1",
+    "witwin-maxwell>=0.2,<0.3",
+    "witwin-radar>=0.2,<0.3",
+    "witwin-channel>=0.1,<0.2",
+    "witwin-genesis>=0.1,<0.2",
 ]
 
 [tool.hatch.build.targets.wheel]
