@@ -90,7 +90,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-22.04, windows-2022]
-        python_version: ["3.10", "3.11", "3.12"]
+        python_version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
 
     steps:
       - name: Check out repository
@@ -113,9 +113,9 @@ jobs:
           echo "Disk after cleanup:"; df -h /
 
       - name: Install CUDA Toolkit
-        uses: Jimver/cuda-toolkit@v0.2.29
+        uses: Jimver/cuda-toolkit@v0.2.35
         with:
-          cuda: "12.5.0"
+          cuda: "12.8.1"
           method: local
           log-file-suffix: "${{ runner.os }}-py${{ matrix.python_version }}"
 
@@ -149,18 +149,30 @@ jobs:
       - name: Install CUDA extension build dependencies
         run: |
           python -m pip install --upgrade pip setuptools wheel ninja numpy
-          python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cu124
           python -m pip install build
 
-      - name: Build packaged mesh SDF CUDA extension
+      - name: Build packaged mesh SDF CUDA extensions
         shell: bash
         env:
           MAX_JOBS: "2"
-          TORCH_CUDA_ARCH_LIST: "7.0;8.0;8.6;8.9;9.0+PTX"
-          WITWIN_CORE_MESH_SDF_CUDA_BUILD_DIR: ${{ runner.temp }}/witwin_core_mesh_sdf_cuda
+          WITWIN_CUDA_GENCODE_ARCHES: "7.0;7.5;8.0;8.6;8.9;9.0;10.0;10.1;12.0+PTX"
           PACKAGE_DIR: ${{ needs.validate_release.outputs.package_dir }}
         run: |
-          python "$PACKAGE_DIR"/scripts/build_mesh_sdf_cuda_prebuilt.py --verbose
+          for torch_version in 2.10.0 2.11.0; do
+            python -m pip install --force-reinstall --no-cache-dir "torch==$torch_version" \
+              --index-url https://download.pytorch.org/whl/cu128
+            export WITWIN_CORE_MESH_SDF_CUDA_BUILD_DIR="${RUNNER_TEMP}/witwin_core_mesh_sdf_cuda/${torch_version}"
+            python "$PACKAGE_DIR"/scripts/build_mesh_sdf_cuda_prebuilt.py --verbose
+          done
+
+      - name: Verify compiled CUDA architectures
+        shell: bash
+        env:
+          PACKAGE_DIR: ${{ needs.validate_release.outputs.package_dir }}
+        run: |
+          python "$PACKAGE_DIR"/scripts/verify_cuda_binary_arches.py \
+            --stem witwin_core_mesh_sdf_cuda \
+            "$PACKAGE_DIR"/witwin/core/geometry/cuda/prebuilt
 
       - name: Build platform wheel
         shell: bash
@@ -169,21 +181,25 @@ jobs:
         run: |
           python -m build --wheel "$PACKAGE_DIR"
 
-      - name: Normalize Linux wheel platform tag
+      - name: Repair Linux wheel platform tag
         if: runner.os == 'Linux'
         shell: bash
         env:
           PACKAGE_DIR: ${{ needs.validate_release.outputs.package_dir }}
         run: |
-          # PyPI rejects the raw linux_x86_64 tag; the extension is built on the
-          # ubuntu-22.04 runner (glibc 2.35), so retag to the matching manylinux
-          # tag. torch/CUDA runtime libraries are runtime dependencies and stay
-          # unbundled, so no auditwheel repair is required.
-          shopt -s nullglob
+          python -m pip install auditwheel patchelf
+          mkdir -p "$PACKAGE_DIR"/wheelhouse
           for whl in "$PACKAGE_DIR"/dist/*-linux_x86_64.whl; do
-            echo "Retagging $whl"
-            python -m wheel tags --platform-tag manylinux_2_35_x86_64 --remove "$whl"
+            python -m auditwheel repair "$whl" \
+              --plat manylinux_2_35_x86_64 \
+              --wheel-dir "$PACKAGE_DIR"/wheelhouse \
+              --exclude libc10.so --exclude libc10_cuda.so \
+              --exclude libtorch.so --exclude libtorch_cpu.so \
+              --exclude libtorch_cuda.so --exclude libtorch_python.so \
+              --exclude libcudart.so.12 --exclude libcuda.so.1
           done
+          rm -f "$PACKAGE_DIR"/dist/*-linux_x86_64.whl
+          mv "$PACKAGE_DIR"/wheelhouse/*.whl "$PACKAGE_DIR"/dist/
           ls -l "$PACKAGE_DIR"/dist
 
       - name: Smoke install prebuilt wheel
@@ -197,8 +213,15 @@ jobs:
           python -m pip install --no-deps "$PACKAGE_DIR"/dist/*.whl
           python - <<'PY'
           import importlib.util
+          import os
           import site
+          import zipfile
           from pathlib import Path
+
+          wheel = next((Path(os.environ["PACKAGE_DIR"]) / "dist").glob("*.whl"))
+          names = zipfile.ZipFile(wheel).namelist()
+          for abi_tag in ("torch_2_10_cu128", "torch_2_11_cu128"):
+              assert any(f"/{abi_tag}/witwin_core_mesh_sdf_cuda" in name for name in names), abi_tag
 
           candidates = []
           for root in site.getsitepackages() + [site.getusersitepackages()]:
@@ -212,6 +235,7 @@ jobs:
 
           path = module.prebuilt_extension_path()
           assert path.exists(), f"missing packaged prebuilt extension: {path}"
+          assert path.parent.name == module.torch_abi_tag()
           extension = module.build_extension()
           print(f"Loaded packaged mesh SDF CUDA extension from {extension.__file__}")
           PY

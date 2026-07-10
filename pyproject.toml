@@ -7,12 +7,12 @@ name = "witwin"
 version = "0.1.0"
 description = "Witwin shared geometry, material, and structure contracts"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.15"
 license = "MIT"
 
 dependencies = [
     "numpy>=1.24",
-    "torch>=2.0",
+    "torch>=2.10,<2.12",
 ]
 
 [project.optional-dependencies]
@@ -34,8 +34,8 @@ artifacts = [
     "witwin/core/geometry/cuda/**/*.cu",
     "witwin/core/geometry/cuda/**/*.cuh",
     "witwin/core/geometry/cuda/**/*.h",
-    "witwin/core/geometry/cuda/prebuilt/*.pyd",
-    "witwin/core/geometry/cuda/prebuilt/*.so",
+    "witwin/core/geometry/cuda/prebuilt/**/*.pyd",
+    "witwin/core/geometry/cuda/prebuilt/**/*.so",
 ]
 
 [tool.hatch.build.hooks.custom]

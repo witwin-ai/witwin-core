@@ -39,21 +39,21 @@ def main() -> None:
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
 
+    cuda_build = _load_cuda_build_module()
     build_dir = Path(
         os.environ.get(
             "WITWIN_CORE_MESH_SDF_CUDA_BUILD_DIR",
-            Path(tempfile.gettempdir()) / "witwin_core_mesh_sdf_cuda_wheel",
+            Path(tempfile.gettempdir()) / "witwin_core_mesh_sdf_cuda_wheel" / cuda_build.torch_abi_tag(),
         )
     )
     os.environ["WITWIN_CORE_MESH_SDF_CUDA_BUILD_DIR"] = str(build_dir)
     os.environ["WITWIN_CORE_MESH_SDF_CUDA_SKIP_PREBUILT"] = "1"
     _ensure_current_device_arch()
 
-    cuda_build = _load_cuda_build_module()
     module = cuda_build.build_extension(verbose=args.verbose)
     module_file = Path(module.__file__).resolve()
 
-    target_dir = cuda_build.prebuilt_root()
+    target_dir = cuda_build.prebuilt_variant_root()
     target_dir.mkdir(parents=True, exist_ok=True)
     for suffix in (".pyd", ".so"):
         existing = target_dir / f"witwin_core_mesh_sdf_cuda{suffix}"

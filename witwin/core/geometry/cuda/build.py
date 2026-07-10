@@ -16,6 +16,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+import torch
 from torch.utils.cpp_extension import load
 
 
@@ -171,17 +172,51 @@ def prebuilt_root() -> Path:
     return source_root() / "prebuilt"
 
 
+def torch_abi_tag() -> str:
+    """Return the directory tag for the active PyTorch CUDA ABI."""
+    release = torch.__version__.split("+", 1)[0].split(".")
+    if len(release) < 2:
+        raise RuntimeError(f"Unable to determine the PyTorch ABI from {torch.__version__!r}.")
+    cuda_version = torch.version.cuda
+    cuda_tag = "cpu" if cuda_version is None else f"cu{cuda_version.replace('.', '')}"
+    return f"torch_{release[0]}_{release[1]}_{cuda_tag}"
+
+
+def prebuilt_variant_root() -> Path:
+    return prebuilt_root() / torch_abi_tag()
+
+
 def extension_suffix() -> str:
     return ".pyd" if os.name == "nt" else ".so"
 
 
 def prebuilt_extension_path() -> Path:
-    return prebuilt_root() / f"{EXTENSION_NAME}{extension_suffix()}"
+    return prebuilt_variant_root() / f"{EXTENSION_NAME}{extension_suffix()}"
 
 
 def extension_sources() -> list[Path]:
     root = source_root()
     return [root / "extension.cpp", root / "mesh_sdf_kernels.cu"]
+
+
+def _cuda_gencode_flags() -> list[str]:
+    """Translate the release architecture list directly into nvcc flags."""
+    value = os.environ.get("WITWIN_CUDA_GENCODE_ARCHES")
+    if not value:
+        return []
+    flags: list[str] = []
+    for entry in value.split(";"):
+        entry = entry.strip()
+        if not entry:
+            continue
+        include_ptx = entry.endswith("+PTX")
+        number = entry.removesuffix("+PTX").replace(".", "")
+        if not number.isdigit():
+            raise ValueError(f"Invalid CUDA architecture {entry!r} in WITWIN_CUDA_GENCODE_ARCHES.")
+        flags.append(f"-gencode=arch=compute_{number},code=sm_{number}")
+        if include_ptx:
+            flags.append(f"-gencode=arch=compute_{number},code=compute_{number}")
+    return flags
 
 
 def _load_extension_file(module_path: Path):
@@ -223,14 +258,14 @@ def _jit_build(build_directory: Path, *, verbose: bool):
         sources=[str(path) for path in extension_sources()],
         build_directory=str(build_directory),
         extra_cflags=["/O2"] if os.name == "nt" else ["-O3"],
-        extra_cuda_cflags=["-O3"],
+        extra_cuda_cflags=["-O3", *_cuda_gencode_flags()],
         extra_ldflags=_conda_torch_ldflags(),
         verbose=verbose,
     )
 
 
 def build_extension(*, verbose: bool = False):
-    default_build_directory = Path(tempfile.gettempdir()) / EXTENSION_NAME
+    default_build_directory = Path(tempfile.gettempdir()) / EXTENSION_NAME / torch_abi_tag()
     build_directory = Path(os.environ.get("WITWIN_CORE_MESH_SDF_CUDA_BUILD_DIR", default_build_directory))
 
     if os.environ.get("WITWIN_CORE_MESH_SDF_CUDA_SKIP_PREBUILT") != "1":
