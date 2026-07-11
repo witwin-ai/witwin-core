@@ -4,7 +4,7 @@ WiTwin Core is the shared data and geometry package of the WiTwin stack. It defi
 
 ## Get Started
 
-CPython 3.10-3.14, PyTorch 2.10-2.11, and an NVIDIA GPU are supported for the main WiTwin simulation workflows.
+CPython 3.10-3.14, PyTorch 2.10 or newer, and an NVIDIA GPU are supported for the main WiTwin simulation workflows.
 
 ```bash
 pip install witwin
@@ -12,7 +12,7 @@ pip install witwin
 
 ## Prebuilt CUDA Support
 
-Release wheels are built for Linux x86_64 and Windows x86_64 with CUDA 12.8. Each wheel carries separate PyTorch 2.10/cu128 and 2.11/cu128 native-extension variants, selected at runtime by the active PyTorch ABI. The fat binaries contain native code for compute capabilities 7.0, 7.5, 8.0, 8.6, 8.9, 9.0, 10.0, 10.1, and 12.0, plus compute 12.0 PTX for forward-compatible Blackwell execution. This includes native coverage for RTX 2080-class Turing GPUs and current data-center and RTX/RTX PRO Blackwell families.
+Release wheels are built for Linux x86_64 and Windows x86_64 with CUDA 12.8. Each platform wheel carries one PyTorch Stable ABI native library built against PyTorch 2.10 and reused across supported Python and PyTorch versions; CI currently verifies PyTorch 2.10-2.12. The fat binaries contain native code for compute capabilities 7.0, 7.5, 8.0, 8.6, 8.9, 9.0, 10.0, 10.1, and 12.0, plus compute 12.0 PTX for forward-compatible Blackwell execution. This includes native coverage for RTX 2080-class Turing GPUs and current data-center and RTX/RTX PRO Blackwell families.
 
 Linux wheels target `manylinux_2_35_x86_64`. The installed NVIDIA driver must support the CUDA 12.x runtime supplied by PyTorch; the CUDA toolkit is only needed for source/JIT builds.
 

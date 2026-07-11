@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "witwin"
-version = "0.1.0"
+version = "0.3.0"
 description = "Witwin shared geometry, material, and structure contracts"
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -12,18 +12,18 @@ license = "MIT"
 
 dependencies = [
     "numpy>=1.24",
-    "torch>=2.10,<2.12",
+    "torch>=2.10",
 ]
 
 [project.optional-dependencies]
 maxwell = ["witwin-maxwell>=0.2,<0.3"]
-radar   = ["witwin-radar>=0.2,<0.3"]
-channel = ["witwin-channel>=0.1,<0.2"]
+radar   = ["witwin-radar>=0.3,<0.4"]
+channel = ["witwin-channel>=0.3,<0.4"]
 genesis = ["witwin-genesis>=0.1,<0.2"]
 all     = [
     "witwin-maxwell>=0.2,<0.3",
-    "witwin-radar>=0.2,<0.3",
-    "witwin-channel>=0.1,<0.2",
+    "witwin-radar>=0.3,<0.4",
+    "witwin-channel>=0.3,<0.4",
     "witwin-genesis>=0.1,<0.2",
 ]
 

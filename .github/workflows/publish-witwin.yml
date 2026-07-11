@@ -83,14 +83,13 @@ jobs:
           PY
 
   build_cuda_wheels:
-    name: Build CUDA wheel / ${{ matrix.os }} / py${{ matrix.python_version }}
+    name: Build stable CUDA wheel / ${{ matrix.os }}
     needs: validate_release
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-22.04, windows-2022]
-        python_version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
 
     steps:
       - name: Check out repository
@@ -99,7 +98,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python_version }}
+          python-version: "3.10"
 
       - name: Free disk space (Linux)
         if: runner.os == 'Linux'
@@ -117,7 +116,7 @@ jobs:
         with:
           cuda: "12.8.1"
           method: local
-          log-file-suffix: "${{ runner.os }}-py${{ matrix.python_version }}"
+          log-file-suffix: "${{ runner.os }}-stable-abi"
 
       - name: Set up MSVC
         if: runner.os == 'Windows'
@@ -149,21 +148,18 @@ jobs:
       - name: Install CUDA extension build dependencies
         run: |
           python -m pip install --upgrade pip setuptools wheel ninja numpy
+          python -m pip install torch==2.10.0 --index-url https://download.pytorch.org/whl/cu128
           python -m pip install build
 
-      - name: Build packaged mesh SDF CUDA extensions
+      - name: Build packaged stable mesh SDF CUDA extension
         shell: bash
         env:
           MAX_JOBS: "2"
           WITWIN_CUDA_GENCODE_ARCHES: "7.0;7.5;8.0;8.6;8.9;9.0;10.0;10.1;12.0+PTX"
           PACKAGE_DIR: ${{ needs.validate_release.outputs.package_dir }}
+          WITWIN_CORE_MESH_SDF_CUDA_BUILD_DIR: ${{ runner.temp }}/witwin_core_mesh_sdf_cuda/stable_abi_v1
         run: |
-          for torch_version in 2.10.0 2.11.0; do
-            python -m pip install --force-reinstall --no-cache-dir "torch==$torch_version" \
-              --index-url https://download.pytorch.org/whl/cu128
-            export WITWIN_CORE_MESH_SDF_CUDA_BUILD_DIR="${RUNNER_TEMP}/witwin_core_mesh_sdf_cuda/${torch_version}"
-            python "$PACKAGE_DIR"/scripts/build_mesh_sdf_cuda_prebuilt.py --verbose
-          done
+          python "$PACKAGE_DIR"/scripts/build_mesh_sdf_cuda_prebuilt.py --verbose
 
       - name: Verify compiled CUDA architectures
         shell: bash
@@ -220,8 +216,10 @@ jobs:
 
           wheel = next((Path(os.environ["PACKAGE_DIR"]) / "dist").glob("*.whl"))
           names = zipfile.ZipFile(wheel).namelist()
-          for abi_tag in ("torch_2_10_cu128", "torch_2_11_cu128"):
-              assert any(f"/{abi_tag}/witwin_core_mesh_sdf_cuda" in name for name in names), abi_tag
+          native = [name for name in names if "witwin_core_mesh_sdf_cuda" in name and name.endswith((".so", ".pyd"))]
+          assert len(native) == 1, native
+          assert "/prebuilt/" in f"/{native[0]}"
+          assert "torch_" not in native[0]
 
           candidates = []
           for root in site.getsitepackages() + [site.getusersitepackages()]:
@@ -235,7 +233,7 @@ jobs:
 
           path = module.prebuilt_extension_path()
           assert path.exists(), f"missing packaged prebuilt extension: {path}"
-          assert path.parent.name == module.torch_abi_tag()
+          assert path.parent.name == "prebuilt"
           extension = module.build_extension()
           print(f"Loaded packaged mesh SDF CUDA extension from {extension.__file__}")
           PY
@@ -243,9 +241,82 @@ jobs:
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v4
         with:
-          name: wheel-${{ matrix.os }}-py${{ matrix.python_version }}
+          name: wheel-${{ matrix.os }}
           path: ${{ needs.validate_release.outputs.package_dir }}/dist/*.whl
           if-no-files-found: error
+
+  test_torch_compatibility:
+    name: Stable ABI / ${{ matrix.os }} / py${{ matrix.compatibility.python_version }} / torch${{ matrix.compatibility.torch_version }}
+    needs:
+      - validate_release
+      - build_cuda_wheels
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-2022]
+        compatibility:
+          - {python_version: "3.10", torch_version: "2.10.0", cuda_index: "cu128"}
+          - {python_version: "3.11", torch_version: "2.10.0", cuda_index: "cu128"}
+          - {python_version: "3.12", torch_version: "2.10.0", cuda_index: "cu128"}
+          - {python_version: "3.13", torch_version: "2.10.0", cuda_index: "cu128"}
+          - {python_version: "3.14", torch_version: "2.10.0", cuda_index: "cu128"}
+          - {python_version: "3.14", torch_version: "2.11.0", cuda_index: "cu128"}
+          - {python_version: "3.14", torch_version: "2.12.0", cuda_index: "cu126"}
+
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.compatibility.python_version }}
+
+      - name: Download stable wheel
+        uses: actions/download-artifact@v4
+        with:
+          name: wheel-${{ matrix.os }}
+          path: dist
+
+      - name: Install compatibility environment
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --no-cache-dir "torch==${{ matrix.compatibility.torch_version }}" \
+            --index-url "https://download.pytorch.org/whl/${{ matrix.compatibility.cuda_index }}"
+          python -m pip install --no-deps dist/*.whl
+
+      - name: Load the same stable binary
+        shell: bash
+        env:
+          EXPECTED_TORCH: ${{ matrix.compatibility.torch_version }}
+          WITWIN_CORE_MESH_SDF_CUDA_PREBUILT: "1"
+          WITWIN_CORE_MESH_SDF_CUDA_BUILD_DIR: ${{ runner.temp }}/must-not-jit-build
+        run: |
+          python - <<'PY'
+          import importlib.util
+          import os
+          import site
+          from pathlib import Path
+
+          import torch
+
+          assert torch.__version__.split("+", 1)[0] == os.environ["EXPECTED_TORCH"]
+          candidates = [
+              Path(root) / "witwin" / "core" / "geometry" / "cuda" / "build.py"
+              for root in site.getsitepackages() + [site.getusersitepackages()]
+          ]
+          build_path = next((path for path in candidates if path.exists()), None)
+          assert build_path is not None, candidates
+          spec = importlib.util.spec_from_file_location("witwin_core_mesh_sdf_cuda_build", build_path)
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+
+          native_path = module.prebuilt_extension_path()
+          assert native_path.exists(), native_path
+          extension = module.build_extension()
+          assert Path(extension.__file__).resolve() == native_path.resolve()
+          assert extension.query_mesh_unsigned_distance is not None
+          print(f"Loaded {native_path.name} with torch {torch.__version__} on Python {os.sys.version.split()[0]}")
+          PY
 
   build_sdist:
     name: Build source distribution
@@ -281,6 +352,7 @@ jobs:
     if: github.event_name == 'release'
     needs:
       - build_cuda_wheels
+      - test_torch_compatibility
       - build_sdist
     runs-on: ubuntu-latest
     permissions:

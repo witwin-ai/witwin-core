@@ -43,7 +43,7 @@ def main() -> None:
     build_dir = Path(
         os.environ.get(
             "WITWIN_CORE_MESH_SDF_CUDA_BUILD_DIR",
-            Path(tempfile.gettempdir()) / "witwin_core_mesh_sdf_cuda_wheel" / cuda_build.torch_abi_tag(),
+            Path(tempfile.gettempdir()) / "witwin_core_mesh_sdf_cuda_wheel" / "stable_abi_v1",
         )
     )
     os.environ["WITWIN_CORE_MESH_SDF_CUDA_BUILD_DIR"] = str(build_dir)
@@ -53,10 +53,10 @@ def main() -> None:
     module = cuda_build.build_extension(verbose=args.verbose)
     module_file = Path(module.__file__).resolve()
 
-    target_dir = cuda_build.prebuilt_variant_root()
+    target_dir = cuda_build.prebuilt_root()
     target_dir.mkdir(parents=True, exist_ok=True)
     for suffix in (".pyd", ".so"):
-        existing = target_dir / f"witwin_core_mesh_sdf_cuda{suffix}"
+        existing = target_dir / f"{cuda_build.EXTENSION_NAME}{suffix}"
         if existing.exists():
             existing.unlink()
     target = cuda_build.prebuilt_extension_path()

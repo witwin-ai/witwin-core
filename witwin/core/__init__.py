@@ -1,6 +1,6 @@
 """Witwin Core - Shared geometry, material, and structure contracts."""
 
-__version__ = "0.1.0"
+__version__ = "0.3.0"
 
 from .material import (
     FrequencyMaterialSample,
