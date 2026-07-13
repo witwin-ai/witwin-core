@@ -427,7 +427,7 @@ class Torus(GeometryBase):
             for minor in range(minor_segments):
                 phi = 2 * np.pi * minor / minor_segments
                 vertices.append([
-                    np.cos(phi) * np.cos(theta),
+                    np.cos(phi),
                     np.cos(phi) * np.sin(theta),
                     np.sin(phi),
                     np.cos(theta),

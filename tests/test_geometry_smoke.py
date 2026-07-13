@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import math
+
 import pytest
 import torch
 
-from witwin.core import Box, Cylinder, Mesh, Sphere
+from witwin.core import Box, Cylinder, Mesh, Sphere, Torus
 
 
 def _grid():
@@ -69,6 +71,26 @@ def test_geometry_construction_to_mesh_and_to_mask(geometry, segments, inside_po
     assert outside_value < 0.5
     assert torch.any(occupancy > 0.5)
     assert torch.any(occupancy < 0.5)
+
+
+def test_torus_mesh_matches_analytic_extents_and_volume():
+    major_radius = 0.8
+    minor_radius = 0.2
+    torus = Torus(major_radius=major_radius, minor_radius=minor_radius, axis="z")
+    vertices, faces = torus.to_mesh(segments=48)
+
+    expected_extents = torch.tensor(
+        [major_radius + minor_radius, major_radius + minor_radius, minor_radius],
+        dtype=vertices.dtype,
+    )
+    torch.testing.assert_close(vertices.abs().amax(dim=0), expected_extents, rtol=1e-6, atol=1e-6)
+
+    triangles = vertices[faces].to(torch.float64)
+    signed_volume = torch.sum(
+        torch.sum(triangles[:, 0] * torch.cross(triangles[:, 1], triangles[:, 2], dim=1), dim=1)
+    ) / 6.0
+    expected_volume = 2.0 * math.pi**2 * major_radius * minor_radius**2
+    assert abs(float(signed_volume)) == pytest.approx(expected_volume, rel=1e-2)
 
 
 def test_mesh_roundtrip_preserves_world_vertices_and_faces():
