@@ -1,14 +1,14 @@
 """Shared differentiable geometry package."""
 
-from .base import GeometryBase
+from .base import GeometryBase, GeometrySpec
 from .mesh import Mesh
-from .primitives import Box, ComplexPolySlab, Cone, Cylinder, Ellipsoid, HollowBox, PolySlab, Prism, Pyramid, Sphere, Torus
-from .smpl import SMPLBody
+from .primitives import Box, Cone, Cylinder, Ellipsoid, HollowBox, Prism, Pyramid, Sphere, Torus
 
-Geometry = Box | Sphere | Cylinder | Cone | Ellipsoid | Pyramid | Prism | PolySlab | ComplexPolySlab | Torus | HollowBox | Mesh | SMPLBody
+Geometry = Box | Sphere | Cylinder | Cone | Ellipsoid | Pyramid | Prism | Torus | HollowBox | Mesh
 
 __all__ = [
     "GeometryBase",
+    "GeometrySpec",
     "Box",
     "Sphere",
     "Cylinder",
@@ -16,11 +16,8 @@ __all__ = [
     "Ellipsoid",
     "Pyramid",
     "Prism",
-    "PolySlab",
-    "ComplexPolySlab",
     "Torus",
     "HollowBox",
     "Mesh",
-    "SMPLBody",
     "Geometry",
 ]

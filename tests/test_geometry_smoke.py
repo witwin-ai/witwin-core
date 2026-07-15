@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import math
+
 import pytest
 import torch
 
-from witwin.core import Box, Cylinder, Mesh, Sphere
-from witwin.core.geometry import PolySlab
+from witwin.core import Box, Cylinder, Mesh, Sphere, Torus
 
 
 def _grid():
@@ -36,17 +37,6 @@ def _grid():
             (0.0, 0.2, -0.1),
             (0.4, 0.2, -0.1),
             64,
-        ),
-        (
-            PolySlab(
-                vertices=[(-0.3, -0.3), (0.3, -0.3), (0.3, 0.3), (-0.3, 0.3)],
-                bounds=(-0.35, 0.35),
-                position=(0.1, -0.2, 0.3),
-            ),
-            16,
-            (0.1, -0.2, 0.3),
-            (0.8, -0.2, 0.3),
-            12,
         ),
     ],
 )
@@ -83,44 +73,24 @@ def test_geometry_construction_to_mesh_and_to_mask(geometry, segments, inside_po
     assert torch.any(occupancy < 0.5)
 
 
-def test_polyslab_nonconvex_to_mesh_produces_expected_topology():
-    slab = PolySlab(
-        vertices=[(-0.5, -0.5), (0.5, -0.5), (0.5, 0.0), (0.0, 0.0), (0.0, 0.5), (-0.5, 0.5)],
-        bounds=(-0.25, 0.25),
-        sidewall_angle=0.1,
+def test_torus_mesh_matches_analytic_extents_and_volume():
+    major_radius = 0.8
+    minor_radius = 0.2
+    torus = Torus(major_radius=major_radius, minor_radius=minor_radius, axis="z")
+    vertices, faces = torus.to_mesh(segments=48)
+
+    expected_extents = torch.tensor(
+        [major_radius + minor_radius, major_radius + minor_radius, minor_radius],
+        dtype=vertices.dtype,
     )
-    vertices, faces = slab.to_mesh()
+    torch.testing.assert_close(vertices.abs().amax(dim=0), expected_extents, rtol=1e-6, atol=1e-6)
 
-    # 6 polygon vertices: 12 side triangles + 2 * (6 - 2) ear-clipped cap triangles.
-    assert vertices.shape == (12, 3)
-    assert faces.shape == (20, 3)
-    assert faces.dtype == torch.int64
-
-
-def test_polyslab_to_mesh_matches_signed_distance_for_all_axes():
-    # Asymmetric polygon so a u/v mirror in the axis remap cannot go unnoticed.
-    vertices_2d = [(0.1, 0.0), (0.9, 0.0), (0.1, 0.6)]
-    for axis in ("x", "y", "z"):
-        slab = PolySlab(vertices=vertices_2d, bounds=(-0.5, 0.5), axis=axis)
-        mesh_vertices, faces = slab.to_mesh()
-
-        distance = slab.signed_distance(mesh_vertices[:, 0], mesh_vertices[:, 1], mesh_vertices[:, 2])
-        assert torch.all(distance.abs() < 1.0e-5), axis
-
-        # Positive divergence-theorem volume implies outward face normals.
-        tri = mesh_vertices[faces]
-        volume = torch.sum(torch.sum(tri[:, 0] * torch.linalg.cross(tri[:, 1], tri[:, 2], dim=1), dim=1)) / 6.0
-        assert volume.item() == pytest.approx(0.5 * 0.8 * 0.6, rel=1.0e-4), axis
-
-
-def test_polyslab_to_mesh_accepts_closed_ring_vertices():
-    slab = PolySlab(
-        vertices=[(-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0), (-1.0, -1.0)],
-        bounds=(-0.5, 0.5),
-    )
-    vertices, faces = slab.to_mesh()
-    assert vertices.shape == (8, 3)
-    assert faces.shape == (12, 3)
+    triangles = vertices[faces].to(torch.float64)
+    signed_volume = torch.sum(
+        torch.sum(triangles[:, 0] * torch.cross(triangles[:, 1], triangles[:, 2], dim=1), dim=1)
+    ) / 6.0
+    expected_volume = 2.0 * math.pi**2 * major_radius * minor_radius**2
+    assert abs(float(signed_volume)) == pytest.approx(expected_volume, rel=1e-2)
 
 
 def test_mesh_roundtrip_preserves_world_vertices_and_faces():

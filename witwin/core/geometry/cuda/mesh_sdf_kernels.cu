@@ -1,17 +1,22 @@
 // Native CUDA triangle-mesh distance / winding / parity kernels.
 //
-// Direct port of the former ``mesh_sdf.slang`` module. The forward kernels
-// reproduce the Slang closest-point (Ericson) and solid-angle math verbatim;
-// the backward kernels replace Slang autodiff with hand-derived analytic
+// Direct port of the former mesh-SDF JIT module. The forward kernels
+// reproduce its closest-point (Ericson) and solid-angle math verbatim;
+// the backward kernels replace generated autodiff with hand-derived analytic
 // gradients. Every closest-point feature (vertex / edge / face) contributes
 // gradients to the triangle vertices through the barycentric weights of the
 // closest point, so grad_p == -(grad_a + grad_b + grad_c) holds by
 // construction (translation invariance of the distance).
 
-#include <ATen/ATen.h>
-#include <ATen/cuda/CUDAContext.h>
-#include <c10/cuda/CUDAException.h>
-#include <c10/cuda/CUDAGuard.h>
+#include <torch/csrc/stable/accelerator.h>
+#include <torch/csrc/stable/c/shim.h>
+#include <torch/csrc/stable/library.h>
+#include <torch/csrc/stable/macros.h>
+#include <torch/csrc/stable/tensor.h>
+#include <torch/headeronly/core/ScalarType.h>
+#include <torch/headeronly/macros/Macros.h>
+
+#include <cuda_runtime.h>
 
 namespace {
 
@@ -57,7 +62,7 @@ __device__ __forceinline__ float3 read_vec3(const float* __restrict__ data, int 
   return make_float3(v[0], v[1], v[2]);
 }
 
-// Closest point on triangle (a, b, c) to p (Ericson, matching mesh_sdf.slang).
+// Closest point on triangle (a, b, c) to p (Ericson, matching the reference implementation).
 // Returns the squared distance and the barycentric weights (la, lb, lc) of the
 // closest point so the backward pass can distribute vertex gradients.
 __device__ __forceinline__ float closest_point_barycentric(
@@ -528,16 +533,29 @@ dim3 linear_grid(int elements, int block_size) {
   return dim3(static_cast<unsigned int>((elements + block_size - 1) / block_size), 1, 1);
 }
 
-void check_f32(const at::Tensor& t, const char* name) {
-  TORCH_CHECK(t.is_cuda(), name, " must be a CUDA tensor");
-  TORCH_CHECK(t.scalar_type() == at::kFloat, name, " must be float32");
-  TORCH_CHECK(t.is_contiguous(), name, " must be contiguous");
+void check_f32(const torch::stable::Tensor& tensor, const char* name) {
+  STD_TORCH_CHECK(tensor.is_cuda(), name, " must be a CUDA tensor");
+  STD_TORCH_CHECK(
+      tensor.scalar_type() == torch::headeronly::ScalarType::Float,
+      name,
+      " must be float32");
+  STD_TORCH_CHECK(tensor.is_contiguous(), name, " must be contiguous");
 }
 
-void check_i32(const at::Tensor& t, const char* name) {
-  TORCH_CHECK(t.is_cuda(), name, " must be a CUDA tensor");
-  TORCH_CHECK(t.scalar_type() == at::kInt, name, " must be int32");
-  TORCH_CHECK(t.is_contiguous(), name, " must be contiguous");
+void check_i32(const torch::stable::Tensor& tensor, const char* name) {
+  STD_TORCH_CHECK(tensor.is_cuda(), name, " must be a CUDA tensor");
+  STD_TORCH_CHECK(
+      tensor.scalar_type() == torch::headeronly::ScalarType::Int,
+      name,
+      " must be int32");
+  STD_TORCH_CHECK(tensor.is_contiguous(), name, " must be contiguous");
+}
+
+cudaStream_t current_cuda_stream(const torch::stable::Tensor& tensor) {
+  void* stream_ptr = nullptr;
+  TORCH_ERROR_CODE_CHECK(
+      aoti_torch_get_current_cuda_stream(tensor.get_device_index(), &stream_ptr));
+  return static_cast<cudaStream_t>(stream_ptr);
 }
 
 constexpr int kBlock = 256;
@@ -545,48 +563,62 @@ constexpr int kBlock = 256;
 }  // namespace
 
 void query_mesh_unsigned_distance_cuda(
-    at::Tensor triangles, at::Tensor points, at::Tensor unsigned_distance, at::Tensor closest_triangle_index) {
+    const torch::stable::Tensor& triangles,
+    const torch::stable::Tensor& points,
+    torch::stable::Tensor& unsigned_distance,
+    torch::stable::Tensor& closest_triangle_index) {
   check_f32(triangles, "triangles");
   check_f32(points, "points");
   check_f32(unsigned_distance, "unsigned_distance");
   check_i32(closest_triangle_index, "closest_triangle_index");
-  const c10::cuda::CUDAGuard guard(points.device());
+  const torch::stable::accelerator::DeviceGuard device_guard(points.get_device_index());
   const int point_count = static_cast<int>(points.size(0));
   if (point_count == 0) {
     return;
   }
-  query_unsigned_distance_kernel<<<linear_grid(point_count, kBlock), kBlock, 0, at::cuda::getCurrentCUDAStream()>>>(
-      triangles.data_ptr<float>(), points.data_ptr<float>(),
+  query_unsigned_distance_kernel<<<linear_grid(point_count, kBlock), kBlock, 0, current_cuda_stream(points)>>>(
+      triangles.const_data_ptr<float>(), points.const_data_ptr<float>(),
       static_cast<int>(triangles.size(0)), point_count,
-      unsigned_distance.data_ptr<float>(), closest_triangle_index.data_ptr<int>());
-  C10_CUDA_KERNEL_LAUNCH_CHECK();
+      unsigned_distance.mutable_data_ptr<float>(), closest_triangle_index.mutable_data_ptr<int>());
+  STD_CUDA_KERNEL_LAUNCH_CHECK();
 }
 
 void query_mesh_distance_and_winding_cuda(
-    at::Tensor triangles, at::Tensor points, at::Tensor unsigned_distance,
-    at::Tensor winding_angle, at::Tensor closest_triangle_index) {
+    const torch::stable::Tensor& triangles,
+    const torch::stable::Tensor& points,
+    torch::stable::Tensor& unsigned_distance,
+    torch::stable::Tensor& winding_angle,
+    torch::stable::Tensor& closest_triangle_index) {
   check_f32(triangles, "triangles");
   check_f32(points, "points");
   check_f32(unsigned_distance, "unsigned_distance");
   check_f32(winding_angle, "winding_angle");
   check_i32(closest_triangle_index, "closest_triangle_index");
-  const c10::cuda::CUDAGuard guard(points.device());
+  const torch::stable::accelerator::DeviceGuard device_guard(points.get_device_index());
   const int point_count = static_cast<int>(points.size(0));
   if (point_count == 0) {
     return;
   }
-  query_distance_and_winding_kernel<<<linear_grid(point_count, kBlock), kBlock, 0, at::cuda::getCurrentCUDAStream()>>>(
-      triangles.data_ptr<float>(), points.data_ptr<float>(),
+  query_distance_and_winding_kernel<<<linear_grid(point_count, kBlock), kBlock, 0, current_cuda_stream(points)>>>(
+      triangles.const_data_ptr<float>(), points.const_data_ptr<float>(),
       static_cast<int>(triangles.size(0)), point_count,
-      unsigned_distance.data_ptr<float>(), winding_angle.data_ptr<float>(),
-      closest_triangle_index.data_ptr<int>());
-  C10_CUDA_KERNEL_LAUNCH_CHECK();
+      unsigned_distance.mutable_data_ptr<float>(), winding_angle.mutable_data_ptr<float>(),
+      closest_triangle_index.mutable_data_ptr<int>());
+  STD_CUDA_KERNEL_LAUNCH_CHECK();
 }
 
 void query_mesh_unsigned_distance_bvh_cuda(
-    at::Tensor triangles, at::Tensor points, at::Tensor node_bbox_min, at::Tensor node_bbox_max,
-    at::Tensor node_left, at::Tensor node_right, at::Tensor node_start, at::Tensor node_count,
-    at::Tensor triangle_indices, at::Tensor unsigned_distance, at::Tensor closest_triangle_index) {
+    const torch::stable::Tensor& triangles,
+    const torch::stable::Tensor& points,
+    const torch::stable::Tensor& node_bbox_min,
+    const torch::stable::Tensor& node_bbox_max,
+    const torch::stable::Tensor& node_left,
+    const torch::stable::Tensor& node_right,
+    const torch::stable::Tensor& node_start,
+    const torch::stable::Tensor& node_count,
+    const torch::stable::Tensor& triangle_indices,
+    torch::stable::Tensor& unsigned_distance,
+    torch::stable::Tensor& closest_triangle_index) {
   check_f32(triangles, "triangles");
   check_f32(points, "points");
   check_f32(node_bbox_min, "node_bbox_min");
@@ -598,25 +630,33 @@ void query_mesh_unsigned_distance_bvh_cuda(
   check_i32(triangle_indices, "triangle_indices");
   check_f32(unsigned_distance, "unsigned_distance");
   check_i32(closest_triangle_index, "closest_triangle_index");
-  const c10::cuda::CUDAGuard guard(points.device());
+  const torch::stable::accelerator::DeviceGuard device_guard(points.get_device_index());
   const int point_count = static_cast<int>(points.size(0));
   if (point_count == 0) {
     return;
   }
-  query_unsigned_distance_bvh_kernel<<<linear_grid(point_count, kBlock), kBlock, 0, at::cuda::getCurrentCUDAStream()>>>(
-      triangles.data_ptr<float>(), points.data_ptr<float>(),
-      node_bbox_min.data_ptr<float>(), node_bbox_max.data_ptr<float>(),
-      node_left.data_ptr<int>(), node_right.data_ptr<int>(),
-      node_start.data_ptr<int>(), node_count.data_ptr<int>(),
-      triangle_indices.data_ptr<int>(), point_count,
-      unsigned_distance.data_ptr<float>(), closest_triangle_index.data_ptr<int>());
-  C10_CUDA_KERNEL_LAUNCH_CHECK();
+  query_unsigned_distance_bvh_kernel<<<linear_grid(point_count, kBlock), kBlock, 0, current_cuda_stream(points)>>>(
+      triangles.const_data_ptr<float>(), points.const_data_ptr<float>(),
+      node_bbox_min.const_data_ptr<float>(), node_bbox_max.const_data_ptr<float>(),
+      node_left.const_data_ptr<int>(), node_right.const_data_ptr<int>(),
+      node_start.const_data_ptr<int>(), node_count.const_data_ptr<int>(),
+      triangle_indices.const_data_ptr<int>(), point_count,
+      unsigned_distance.mutable_data_ptr<float>(), closest_triangle_index.mutable_data_ptr<int>());
+  STD_CUDA_KERNEL_LAUNCH_CHECK();
 }
 
 void query_mesh_parity_sign_bvh_cuda(
-    at::Tensor triangles, at::Tensor points, at::Tensor node_bbox_min, at::Tensor node_bbox_max,
-    at::Tensor node_left, at::Tensor node_right, at::Tensor node_start, at::Tensor node_count,
-    at::Tensor triangle_indices, double jitter_scale, at::Tensor inside) {
+    const torch::stable::Tensor& triangles,
+    const torch::stable::Tensor& points,
+    const torch::stable::Tensor& node_bbox_min,
+    const torch::stable::Tensor& node_bbox_max,
+    const torch::stable::Tensor& node_left,
+    const torch::stable::Tensor& node_right,
+    const torch::stable::Tensor& node_start,
+    const torch::stable::Tensor& node_count,
+    const torch::stable::Tensor& triangle_indices,
+    double jitter_scale,
+    torch::stable::Tensor& inside) {
   check_f32(triangles, "triangles");
   check_f32(points, "points");
   check_f32(node_bbox_min, "node_bbox_min");
@@ -627,46 +667,54 @@ void query_mesh_parity_sign_bvh_cuda(
   check_i32(node_count, "node_count");
   check_i32(triangle_indices, "triangle_indices");
   check_i32(inside, "inside");
-  const c10::cuda::CUDAGuard guard(points.device());
+  const torch::stable::accelerator::DeviceGuard device_guard(points.get_device_index());
   const int point_count = static_cast<int>(points.size(0));
   if (point_count == 0) {
     return;
   }
-  query_parity_sign_bvh_kernel<<<linear_grid(point_count, kBlock), kBlock, 0, at::cuda::getCurrentCUDAStream()>>>(
-      triangles.data_ptr<float>(), points.data_ptr<float>(),
-      node_bbox_min.data_ptr<float>(), node_bbox_max.data_ptr<float>(),
-      node_left.data_ptr<int>(), node_right.data_ptr<int>(),
-      node_start.data_ptr<int>(), node_count.data_ptr<int>(),
-      triangle_indices.data_ptr<int>(), static_cast<float>(jitter_scale), point_count,
-      inside.data_ptr<int>());
-  C10_CUDA_KERNEL_LAUNCH_CHECK();
+  query_parity_sign_bvh_kernel<<<linear_grid(point_count, kBlock), kBlock, 0, current_cuda_stream(points)>>>(
+      triangles.const_data_ptr<float>(), points.const_data_ptr<float>(),
+      node_bbox_min.const_data_ptr<float>(), node_bbox_max.const_data_ptr<float>(),
+      node_left.const_data_ptr<int>(), node_right.const_data_ptr<int>(),
+      node_start.const_data_ptr<int>(), node_count.const_data_ptr<int>(),
+      triangle_indices.const_data_ptr<int>(), static_cast<float>(jitter_scale), point_count,
+      inside.mutable_data_ptr<int>());
+  STD_CUDA_KERNEL_LAUNCH_CHECK();
 }
 
 void backward_mesh_unsigned_distance_cuda(
-    at::Tensor triangles, at::Tensor points, at::Tensor closest_triangle_index,
-    at::Tensor grad_unsigned_distance, at::Tensor grad_triangles, at::Tensor grad_points) {
+    const torch::stable::Tensor& triangles,
+    const torch::stable::Tensor& points,
+    const torch::stable::Tensor& closest_triangle_index,
+    const torch::stable::Tensor& grad_unsigned_distance,
+    torch::stable::Tensor& grad_triangles,
+    torch::stable::Tensor& grad_points) {
   check_f32(triangles, "triangles");
   check_f32(points, "points");
   check_i32(closest_triangle_index, "closest_triangle_index");
   check_f32(grad_unsigned_distance, "grad_unsigned_distance");
   check_f32(grad_triangles, "grad_triangles");
   check_f32(grad_points, "grad_points");
-  const c10::cuda::CUDAGuard guard(points.device());
+  const torch::stable::accelerator::DeviceGuard device_guard(points.get_device_index());
   const int point_count = static_cast<int>(points.size(0));
   if (point_count == 0) {
     return;
   }
-  backward_unsigned_distance_kernel<<<linear_grid(point_count, kBlock), kBlock, 0, at::cuda::getCurrentCUDAStream()>>>(
-      triangles.data_ptr<float>(), points.data_ptr<float>(),
-      closest_triangle_index.data_ptr<int>(), grad_unsigned_distance.data_ptr<float>(),
-      point_count, grad_triangles.data_ptr<float>(), grad_points.data_ptr<float>());
-  C10_CUDA_KERNEL_LAUNCH_CHECK();
+  backward_unsigned_distance_kernel<<<linear_grid(point_count, kBlock), kBlock, 0, current_cuda_stream(points)>>>(
+      triangles.const_data_ptr<float>(), points.const_data_ptr<float>(),
+      closest_triangle_index.const_data_ptr<int>(), grad_unsigned_distance.const_data_ptr<float>(),
+      point_count, grad_triangles.mutable_data_ptr<float>(), grad_points.mutable_data_ptr<float>());
+  STD_CUDA_KERNEL_LAUNCH_CHECK();
 }
 
 void backward_mesh_distance_and_winding_cuda(
-    at::Tensor triangles, at::Tensor points, at::Tensor closest_triangle_index,
-    at::Tensor grad_unsigned_distance, at::Tensor grad_winding_angle,
-    at::Tensor grad_triangles, at::Tensor grad_points) {
+    const torch::stable::Tensor& triangles,
+    const torch::stable::Tensor& points,
+    const torch::stable::Tensor& closest_triangle_index,
+    const torch::stable::Tensor& grad_unsigned_distance,
+    const torch::stable::Tensor& grad_winding_angle,
+    torch::stable::Tensor& grad_triangles,
+    torch::stable::Tensor& grad_points) {
   check_f32(triangles, "triangles");
   check_f32(points, "points");
   check_i32(closest_triangle_index, "closest_triangle_index");
@@ -674,15 +722,24 @@ void backward_mesh_distance_and_winding_cuda(
   check_f32(grad_winding_angle, "grad_winding_angle");
   check_f32(grad_triangles, "grad_triangles");
   check_f32(grad_points, "grad_points");
-  const c10::cuda::CUDAGuard guard(points.device());
+  const torch::stable::accelerator::DeviceGuard device_guard(points.get_device_index());
   const int point_count = static_cast<int>(points.size(0));
   if (point_count == 0) {
     return;
   }
-  backward_distance_and_winding_kernel<<<linear_grid(point_count, kBlock), kBlock, 0, at::cuda::getCurrentCUDAStream()>>>(
-      triangles.data_ptr<float>(), points.data_ptr<float>(),
-      closest_triangle_index.data_ptr<int>(), grad_unsigned_distance.data_ptr<float>(),
-      grad_winding_angle.data_ptr<float>(), static_cast<int>(triangles.size(0)), point_count,
-      grad_triangles.data_ptr<float>(), grad_points.data_ptr<float>());
-  C10_CUDA_KERNEL_LAUNCH_CHECK();
+  backward_distance_and_winding_kernel<<<linear_grid(point_count, kBlock), kBlock, 0, current_cuda_stream(points)>>>(
+      triangles.const_data_ptr<float>(), points.const_data_ptr<float>(),
+      closest_triangle_index.const_data_ptr<int>(), grad_unsigned_distance.const_data_ptr<float>(),
+      grad_winding_angle.const_data_ptr<float>(), static_cast<int>(triangles.size(0)), point_count,
+      grad_triangles.mutable_data_ptr<float>(), grad_points.mutable_data_ptr<float>());
+  STD_CUDA_KERNEL_LAUNCH_CHECK();
+}
+
+STABLE_TORCH_LIBRARY_IMPL(witwin_core_mesh_sdf_cuda, CUDA, m) {
+  m.impl("query_mesh_unsigned_distance", TORCH_BOX(&query_mesh_unsigned_distance_cuda));
+  m.impl("query_mesh_distance_and_winding", TORCH_BOX(&query_mesh_distance_and_winding_cuda));
+  m.impl("query_mesh_unsigned_distance_bvh", TORCH_BOX(&query_mesh_unsigned_distance_bvh_cuda));
+  m.impl("query_mesh_parity_sign_bvh", TORCH_BOX(&query_mesh_parity_sign_bvh_cuda));
+  m.impl("backward_mesh_unsigned_distance", TORCH_BOX(&backward_mesh_unsigned_distance_cuda));
+  m.impl("backward_mesh_distance_and_winding", TORCH_BOX(&backward_mesh_distance_and_winding_cuda));
 }

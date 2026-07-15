@@ -6,42 +6,46 @@ from typing import Any, Mapping, Protocol, runtime_checkable
 
 import numpy as np
 
+from .geometry.base import GeometrySpec
+
 VACUUM_PERMITTIVITY = 8.8541878128e-12
 
 
-def _coerce_scalar(value: float, *, name: str) -> float:
-    return float(value)
-
-
-def _coerce_nonnegative(value: float, *, name: str) -> float:
-    scalar = float(value)
-    if scalar < 0.0:
-        raise ValueError(f"{name} must be >= 0.")
-    return scalar
-
-
-def _coerce_differentiable_scalar(value: Any, *, name: str) -> Any:
+def _coerce_scalar(value: Any, *, name: str) -> Any:
     try:
         return float(value)
     except (TypeError, ValueError):
         return value
 
 
-def _coerce_differentiable_nonnegative(value: Any, *, name: str) -> Any:
+def _numeric_scalar(value: Any) -> float | None:
+    for candidate in (
+        lambda item: float(item),
+        lambda item: float(item.item()),
+        lambda item: float(item[0]),
+    ):
+        try:
+            return candidate(value)
+        except (TypeError, ValueError, IndexError, KeyError, AttributeError):
+            continue
+    return None
+
+
+def _coerce_nonnegative(value: Any, *, name: str) -> Any:
+    scalar = _numeric_scalar(value)
+    if scalar is not None and scalar < 0.0:
+        raise ValueError(f"{name} must be >= 0.")
     try:
-        scalar = float(value)
+        return float(value)
     except (TypeError, ValueError):
         return value
-    if scalar < 0.0:
-        raise ValueError(f"{name} must be >= 0.")
-    return scalar
 
 
 def _is_numeric_close(value: Any, target: float) -> bool:
-    try:
-        return bool(np.isclose(float(value), target))
-    except (TypeError, ValueError):
+    scalar = _numeric_scalar(value)
+    if scalar is None:
         return False
+    return bool(np.isclose(scalar, target))
 
 
 @dataclass(frozen=True)
@@ -82,64 +86,6 @@ class MaterialSpec(Protocol):
 
 @dataclass(frozen=True, init=False)
 class Material(MaterialSpec):
-    eps_r: float
-    mu_r: float
-    sigma_e: float
-    name: str | None
-
-    def __init__(
-        self,
-        eps_r: float = 1.0,
-        mu_r: float = 1.0,
-        sigma_e: float = 0.0,
-        name: str | None = None,
-    ):
-        object.__setattr__(self, "eps_r", _coerce_scalar(eps_r, name="eps_r"))
-        object.__setattr__(self, "mu_r", _coerce_scalar(mu_r, name="mu_r"))
-        object.__setattr__(self, "sigma_e", _coerce_nonnegative(sigma_e, name="sigma_e"))
-        object.__setattr__(self, "name", None if name is None else str(name))
-
-    def capabilities(self) -> MaterialCapabilities:
-        return MaterialCapabilities(
-            conductive=not np.isclose(self.sigma_e, 0.0),
-            magnetic=not np.isclose(self.mu_r, 1.0),
-            anisotropic=False,
-            dispersive=False,
-        )
-
-    def evaluate_static(self) -> StaticMaterialSample:
-        return StaticMaterialSample(
-            eps_r=self.eps_r,
-            mu_r=self.mu_r,
-            sigma_e=self.sigma_e,
-        )
-
-    def evaluate_at_frequency(self, frequency: float) -> FrequencyMaterialSample:
-        resolved_frequency = float(frequency)
-        if resolved_frequency < 0.0:
-            raise ValueError("frequency must be >= 0.")
-        if resolved_frequency == 0.0:
-            if not np.isclose(self.sigma_e, 0.0):
-                raise ValueError("Conductive materials require frequency > 0.")
-            return FrequencyMaterialSample(
-                eps_r=complex(self.eps_r, 0.0),
-                mu_r=self.mu_r,
-                sigma_e=self.sigma_e,
-            )
-
-        eps_r = complex(
-            self.eps_r,
-            -self.sigma_e / (2.0 * np.pi * resolved_frequency * VACUUM_PERMITTIVITY),
-        )
-        return FrequencyMaterialSample(
-            eps_r=eps_r,
-            mu_r=self.mu_r,
-            sigma_e=self.sigma_e,
-        )
-
-
-@dataclass(frozen=True, init=False)
-class DifferentiableMaterial(MaterialSpec):
     eps_r: Any
     mu_r: Any
     sigma_e: Any
@@ -152,9 +98,9 @@ class DifferentiableMaterial(MaterialSpec):
         sigma_e: Any = 0.0,
         name: str | None = None,
     ):
-        object.__setattr__(self, "eps_r", _coerce_differentiable_scalar(eps_r, name="eps_r"))
-        object.__setattr__(self, "mu_r", _coerce_differentiable_scalar(mu_r, name="mu_r"))
-        object.__setattr__(self, "sigma_e", _coerce_differentiable_nonnegative(sigma_e, name="sigma_e"))
+        object.__setattr__(self, "eps_r", _coerce_scalar(eps_r, name="eps_r"))
+        object.__setattr__(self, "mu_r", _coerce_scalar(mu_r, name="mu_r"))
+        object.__setattr__(self, "sigma_e", _coerce_nonnegative(sigma_e, name="sigma_e"))
         object.__setattr__(self, "name", None if name is None else str(name))
 
     def capabilities(self) -> MaterialCapabilities:
@@ -176,31 +122,31 @@ class DifferentiableMaterial(MaterialSpec):
         resolved_frequency = float(frequency)
         if resolved_frequency < 0.0:
             raise ValueError("frequency must be >= 0.")
+        sigma_scalar = _numeric_scalar(self.sigma_e)
         if resolved_frequency == 0.0:
-            if not _is_numeric_close(self.sigma_e, 0.0):
-                try:
-                    scalar_sigma = float(self.sigma_e)
-                except (TypeError, ValueError):
-                    scalar_sigma = None
-                if scalar_sigma is not None:
-                    raise ValueError("Conductive materials require frequency > 0.")
+            if sigma_scalar is not None and not np.isclose(sigma_scalar, 0.0):
+                raise ValueError("Conductive materials require frequency > 0.")
+            eps_scalar = _numeric_scalar(self.eps_r)
+            mu_scalar = _numeric_scalar(self.mu_r)
             return FrequencyMaterialSample(
-                eps_r=self.eps_r,
-                mu_r=self.mu_r,
-                sigma_e=self.sigma_e,
+                eps_r=self.eps_r if eps_scalar is None else complex(eps_scalar, 0.0),
+                mu_r=self.mu_r if mu_scalar is None else mu_scalar,
+                sigma_e=self.sigma_e if sigma_scalar is None else sigma_scalar,
             )
 
-        try:
-            eps_r = complex(
-                float(self.eps_r),
-                -float(self.sigma_e) / (2.0 * np.pi * resolved_frequency * VACUUM_PERMITTIVITY),
-            )
-            mu_r = float(self.mu_r)
-            sigma_e = float(self.sigma_e)
-        except (TypeError, ValueError):
+        eps_scalar = _numeric_scalar(self.eps_r)
+        mu_scalar = _numeric_scalar(self.mu_r)
+        if eps_scalar is None or sigma_scalar is None:
             eps_r = self.eps_r
             mu_r = self.mu_r
             sigma_e = self.sigma_e
+        else:
+            eps_r = complex(
+                eps_scalar,
+                -sigma_scalar / (2.0 * np.pi * resolved_frequency * VACUUM_PERMITTIVITY),
+            )
+            mu_r = self.mu_r if mu_scalar is None else mu_scalar
+            sigma_e = self.sigma_e if sigma_scalar is None else sigma_scalar
         return FrequencyMaterialSample(
             eps_r=eps_r,
             mu_r=mu_r,
@@ -210,7 +156,7 @@ class DifferentiableMaterial(MaterialSpec):
 
 @dataclass(frozen=True, init=False)
 class Structure:
-    geometry: Any
+    geometry: GeometrySpec
     material: MaterialSpec
     name: str | None
     priority: int
@@ -220,7 +166,7 @@ class Structure:
 
     def __init__(
         self,
-        geometry: Any,
+        geometry: GeometrySpec,
         material: MaterialSpec,
         name: str | None = None,
         priority: int = 0,
@@ -228,8 +174,13 @@ class Structure:
         tags=(),
         metadata: Mapping[str, Any] | None = None,
     ):
-        if material is None:
-            raise ValueError("Structure requires material=.")
+        if not isinstance(geometry, GeometrySpec):
+            raise TypeError("Structure geometry must implement GeometrySpec (kind and to_mesh()).")
+        if not isinstance(material, MaterialSpec):
+            raise TypeError(
+                "Structure material must implement MaterialSpec "
+                "(name, capabilities(), evaluate_static(), and evaluate_at_frequency())."
+            )
         object.__setattr__(self, "geometry", geometry)
         object.__setattr__(self, "material", material)
         object.__setattr__(self, "name", None if name is None else str(name))

@@ -8,7 +8,6 @@ rather than imported from the maxwell FDTD CUDA build.
 
 from __future__ import annotations
 
-import importlib.util
 import os
 import shutil
 import subprocess
@@ -16,6 +15,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+import torch
 from torch.utils.cpp_extension import load
 
 
@@ -184,19 +184,49 @@ def extension_sources() -> list[Path]:
     return [root / "extension.cpp", root / "mesh_sdf_kernels.cu"]
 
 
-def _load_extension_file(module_path: Path):
-    spec = importlib.util.spec_from_file_location(EXTENSION_NAME, module_path)
-    if spec is None or spec.loader is None:
-        raise ImportError(f"Unable to create import spec for {module_path}.")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+def _cuda_gencode_flags() -> list[str]:
+    """Translate the release architecture list directly into nvcc flags."""
+    value = os.environ.get("WITWIN_CUDA_GENCODE_ARCHES")
+    if not value:
+        return []
+    flags: list[str] = []
+    for entry in value.split(";"):
+        entry = entry.strip()
+        if not entry:
+            continue
+        include_ptx = entry.endswith("+PTX")
+        number = entry.removesuffix("+PTX").replace(".", "")
+        if not number.isdigit():
+            raise ValueError(f"Invalid CUDA architecture {entry!r} in WITWIN_CUDA_GENCODE_ARCHES.")
+        flags.append(f"-gencode=arch=compute_{number},code=sm_{number}")
+        if include_ptx:
+            flags.append(f"-gencode=arch=compute_{number},code=compute_{number}")
+    return flags
+
+
+class _StableOpsModule:
+    """Attribute-compatible view of the Stable ABI dispatcher operators."""
+
+    def __init__(self, library_path: Path) -> None:
+        self.__file__ = str(library_path)
+
+    def is_available(self) -> bool:
+        return bool(torch.cuda.is_available())
+
+    def __getattr__(self, name: str):
+        return getattr(torch.ops.witwin_core_mesh_sdf_cuda, name)
+
+
+def _load_extension_file(library_path: Path) -> _StableOpsModule:
+    torch.ops.load_library(str(library_path))
+    if not hasattr(torch.ops.witwin_core_mesh_sdf_cuda, "query_mesh_unsigned_distance"):
+        raise ImportError(f"{library_path} does not register the Stable ABI mesh SDF operators.")
+    return _StableOpsModule(library_path)
 
 
 def _load_packaged_prebuilt_extension():
-    # Wheels ship a compiled extension in ``prebuilt/`` so installs never invoke
-    # nvcc/MSVC. A build against a mismatched torch ABI raises on import; the
-    # caller falls back to a JIT rebuild in that case.
+    # Wheels ship a Stable ABI library in ``prebuilt/`` so installs never invoke
+    # nvcc/MSVC and the same binary loads across supported Python/Torch versions.
     module_path = prebuilt_extension_path()
     if not module_path.exists():
         return None
@@ -218,19 +248,30 @@ def _jit_build(build_directory: Path, *, verbose: bool):
     _ensure_windows_build_tools_on_path()
     _ensure_cuda_home_from_nvcc()
     build_directory.mkdir(parents=True, exist_ok=True)
-    return load(
+    library_path = load(
         name=EXTENSION_NAME,
         sources=[str(path) for path in extension_sources()],
         build_directory=str(build_directory),
-        extra_cflags=["/O2"] if os.name == "nt" else ["-O3"],
-        extra_cuda_cflags=["-O3"],
+        extra_cflags=(
+            ["/O2", "/DTORCH_TARGET_VERSION=0x020a000000000000"]
+            if os.name == "nt"
+            else ["-O3", "-DTORCH_TARGET_VERSION=0x020a000000000000"]
+        ),
+        extra_cuda_cflags=[
+            "-O3",
+            "-DTORCH_TARGET_VERSION=0x020a000000000000",
+            "-DUSE_CUDA",
+            *_cuda_gencode_flags(),
+        ],
         extra_ldflags=_conda_torch_ldflags(),
+        is_python_module=False,
         verbose=verbose,
     )
+    return _StableOpsModule(Path(library_path))
 
 
 def build_extension(*, verbose: bool = False):
-    default_build_directory = Path(tempfile.gettempdir()) / EXTENSION_NAME
+    default_build_directory = Path(tempfile.gettempdir()) / EXTENSION_NAME / "stable_abi_v1"
     build_directory = Path(os.environ.get("WITWIN_CORE_MESH_SDF_CUDA_BUILD_DIR", default_build_directory))
 
     if os.environ.get("WITWIN_CORE_MESH_SDF_CUDA_SKIP_PREBUILT") != "1":
