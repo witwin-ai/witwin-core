@@ -251,6 +251,7 @@ class SceneSnapshot:
             identity=tuple(
                 (
                     int(structure.structure_id),
+                    int(structure.surface_id),
                     None
                     if structure.primitive_ids is None
                     else tuple(int(value) for value in structure.primitive_ids),
@@ -261,7 +262,10 @@ class SceneSnapshot:
                 state
                 for structure in structures
                 for state in _tensor_states(
-                    getattr(structure.geometry, "_faces_tensor", ()),
+                    (
+                        getattr(structure.geometry, "_faces_tensor", ()),
+                        structure.face_uv,
+                    ),
                     include_identity=False,
                 )
             ),
@@ -275,6 +279,7 @@ class SceneSnapshot:
             tuple(
                 (
                     state.structure.geometry,
+                    state.structure.uv,
                     state.rigid_motion,
                     state.deformation,
                 )
@@ -353,6 +358,7 @@ class SceneSnapshot:
             identity=tuple(
                 (
                     int(state.structure.structure_id),
+                    int(state.structure.surface_id),
                     int(state.structure.assignment_id),
                     int(state.structure.material_id),
                 )
@@ -438,6 +444,7 @@ class Scene:
         material_objects_by_id: dict[int, MaterialSpec] = {}
         used_structure_ids: set[int] = set()
         used_assignment_ids: set[int] = set()
+        used_surface_ids: set[int] = set()
         used_primitive_ids: set[int] = set()
         normalized: list[Structure] = []
         for structure in structures:
@@ -453,16 +460,25 @@ class Scene:
             structure_id = structure.structure_id
             assignment_id = structure.assignment_id
             material_id = structure.material_id
+            surface_id = structure.surface_id
 
             structure_value = int(structure_id)
             assignment_value = int(assignment_id)
             material_value = int(material_id)
-            if min(structure_value, assignment_value, material_value) < 0:
+            surface_value = int(surface_id)
+            if min(
+                structure_value,
+                assignment_value,
+                material_value,
+                surface_value,
+            ) < 0:
                 raise ValueError("Scene IDs must be non-negative.")
             if structure_value in used_structure_ids:
                 raise ValueError("Structure IDs must be unique within a Scene.")
             if assignment_value in used_assignment_ids:
                 raise ValueError("Assignment IDs must be unique within a Scene.")
+            if surface_value in used_surface_ids:
+                raise ValueError("Surface IDs must be unique within a Scene.")
             primitive_values = tuple(
                 int(value) for value in (structure.primitive_ids or ())
             )
@@ -487,6 +503,7 @@ class Scene:
 
             used_structure_ids.add(structure_value)
             used_assignment_ids.add(assignment_value)
+            used_surface_ids.add(surface_value)
             used_primitive_ids.update(primitive_values)
             material_objects_by_id[material_value] = structure.material
             normalized.append(structure)
@@ -500,10 +517,12 @@ class Scene:
             for state in _tensor_states(
                 getattr(structure.geometry, "_faces_tensor", ())
             )
+            + _tensor_states(structure.face_uv)
         )
         identity = tuple(
             (
                 int(structure.structure_id),
+                int(structure.surface_id),
                 None
                 if structure.primitive_ids is None
                 else tuple(int(value) for value in structure.primitive_ids),
@@ -530,6 +549,7 @@ class Scene:
             else:
                 geometry_values = geometry
             geometry_states.extend(_tensor_states(geometry_values))
+            geometry_states.extend(_tensor_states(structure.uv))
         geometry_states.extend(_tensor_states(self.endpoints))
         return _state_version(
             self._versions.geometry,
@@ -568,6 +588,7 @@ class Scene:
             identity=tuple(
                 (
                     int(structure.structure_id),
+                    int(structure.surface_id),
                     int(structure.assignment_id),
                     int(structure.material_id),
                 )
@@ -594,6 +615,7 @@ class Scene:
         return tuple(
             MaterialAssignment(
                 assignment_id=structure.assignment_id,
+                surface_id=structure.surface_id,
                 material_id=structure.material_id,
                 material=structure.material,
                 phase_screen=structure.phase_screen,

@@ -9,11 +9,13 @@ MaterialId = NewType("MaterialId", int)
 AssignmentId = NewType("AssignmentId", int)
 PrimitiveId = NewType("PrimitiveId", int)
 AntennaId = NewType("AntennaId", int)
+SurfaceId = NewType("SurfaceId", int)
 
 _NEXT_STRUCTURE_ID = 0
 _NEXT_MATERIAL_ID = 0
 _NEXT_ASSIGNMENT_ID = 0
 _NEXT_ANTENNA_ID = 0
+_NEXT_SURFACE_ID = 0
 _ID_LOCK = Lock()
 
 
@@ -56,6 +58,14 @@ def new_antenna_id() -> AntennaId:
     return AntennaId(value)
 
 
+def new_surface_id() -> SurfaceId:
+    global _NEXT_SURFACE_ID
+    with _ID_LOCK:
+        value = _NEXT_SURFACE_ID
+        _NEXT_SURFACE_ID += 1
+    return SurfaceId(value)
+
+
 def reserve_structure_id(value: int) -> StructureId:
     global _NEXT_STRUCTURE_ID
     resolved = _validated_id(value, name="structure_id")
@@ -88,10 +98,19 @@ def reserve_antenna_id(value: int) -> AntennaId:
     return AntennaId(resolved)
 
 
+def reserve_surface_id(value: int) -> SurfaceId:
+    global _NEXT_SURFACE_ID
+    resolved = _validated_id(value, name="surface_id")
+    with _ID_LOCK:
+        _NEXT_SURFACE_ID = max(_NEXT_SURFACE_ID, resolved + 1)
+    return SurfaceId(resolved)
+
+
 __all__ = [
     "AntennaId",
     "AssignmentId",
     "MaterialId",
     "PrimitiveId",
     "StructureId",
+    "SurfaceId",
 ]

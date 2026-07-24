@@ -22,12 +22,35 @@ For full CUDA 12.8 and Blackwell support, use at least driver 570.26 on Linux or
 
 - Canonical `Scene`, `SceneSnapshot`, `Structure`, and stable logical IDs
 - Solver-neutral `PhysicalMaterial`, layers, roughness, dispersion, and phase-screen assignments
-- Logical TX/RX antenna state, rigid motion, trajectories, and deformation state
+- Logical TX/RX antenna state, planar receiver grids, rigid motion, trajectories, and deformation state
+- Stable structure, surface, material, assignment, primitive, and antenna identities
+- Typed mesh UV topology and explicit finite/perfect conductor material identity
 - Runtime-checkable `GeometrySpec` and `MaterialSpec` contracts
 - Shared analytic geometry primitives and differentiable mesh/SDF utilities
 - Granular topology, geometry, material, and assignment versions
 
 Core owns the logical `Scene`; each solver owns its compiled scene lifecycle, native resources, caches, and results. Radar-specific SMPL geometry lives in `witwin.radar.geometry`; Maxwell-specific `PolySlab` geometry lives in `witwin.maxwell.geometry`.
+
+## Coordinate and Motion Semantics
+
+Antenna orientation maps endpoint-local coordinates into world coordinates.
+Euler orientation is `(yaw, pitch, roll)` in radians with intrinsic Z-Y-X
+rotations; quaternion orientation is scalar-first `(w, x, y, z)`.
+Polarization and antenna element positions are endpoint-local, while
+`ReceiverGrid.x_axis` and `y_axis` are world-frame grid directions. Core's
+Torch rotation and projection helpers preserve autograd.
+
+Snapshot deformation is composed before motion: absolute deformation vertices
+replace authored local mesh vertices, or offsets are added to them; authored
+geometry transforms are applied next. `RigidMotion.rotation` then left-composes
+the authored rotation and its world-frame translation is added last. Endpoint
+motion follows the same rule after antenna-local orientation.
+
+`PhysicalMaterial(conductor_model="perfect")`, or the equivalent
+`PhysicalMaterial.perfect_conductor()`, carries explicit PEC identity while
+keeping finite logical material parameters. Solver-owned compilers map that
+identity to their native material ABI; Core does not encode native model IDs or
+effective conductivity constants.
 
 ## 0.4 Migration
 

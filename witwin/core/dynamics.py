@@ -27,7 +27,13 @@ def _optional_tensor(value, *, name: str, shape_tail: tuple[int, ...]):
 
 @dataclass(frozen=True, init=False)
 class RigidMotion:
-    """Continuous rigid state relative to a structure or endpoint."""
+    """Additional rigid state composed after the authored logical pose.
+
+    ``translation`` is a world-frame displacement. ``rotation`` is a
+    local-to-world rotation composed on the left of the authored rotation;
+    Euler values use the antenna ``(yaw, pitch, roll)`` intrinsic Z-Y-X
+    convention and quaternions use scalar-first ``(w, x, y, z)``.
+    """
 
     translation: torch.Tensor | None
     rotation: torch.Tensor | None
@@ -108,7 +114,12 @@ class RigidMotion:
 
 @dataclass(frozen=True, init=False)
 class DeformationState:
-    """Topology-preserving absolute vertices or vertex offsets."""
+    """Topology-preserving local-space vertices or vertex offsets.
+
+    Absolute ``vertices`` replace authored local mesh vertices; ``offsets`` are
+    added to authored local vertices. Deformation is resolved before authored
+    geometry transforms and the snapshot's additional rigid motion.
+    """
 
     vertices: torch.Tensor | None
     offsets: torch.Tensor | None
@@ -149,7 +160,7 @@ class Deformation(Protocol):
 
 @dataclass(frozen=True)
 class LinearTrajectory:
-    """Constant-velocity translation with an optional fixed orientation."""
+    """Constant-velocity world displacement from ``origin`` at reference time."""
 
     origin: torch.Tensor
     velocity: torch.Tensor

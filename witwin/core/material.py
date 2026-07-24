@@ -4,7 +4,7 @@ import math
 from dataclasses import dataclass
 from numbers import Real
 from types import MappingProxyType
-from typing import Any, Mapping, Protocol, runtime_checkable
+from typing import Any, Literal, Mapping, Protocol, runtime_checkable
 
 import numpy as np
 import torch
@@ -15,12 +15,15 @@ from .identity import (
     MaterialId,
     PrimitiveId,
     StructureId,
+    SurfaceId,
     new_assignment_id,
     new_material_id,
     new_structure_id,
+    new_surface_id,
     reserve_assignment_id,
     reserve_material_id,
     reserve_structure_id,
+    reserve_surface_id,
 )
 
 VACUUM_PERMITTIVITY = 8.8541878128e-12
@@ -121,6 +124,7 @@ def _complex_permittivity(
 @dataclass(frozen=True)
 class MaterialCapabilities:
     conductive: bool = False
+    perfect_conductor: bool = False
     magnetic: bool = False
     anisotropic: bool = False
     dispersive: bool = False
@@ -330,6 +334,7 @@ class PhysicalMaterial(MaterialSpec):
     gain: Any
     scattering_coefficient: Any
     xpd_coefficient: Any
+    conductor_model: Literal["finite", "perfect"]
 
     def __init__(
         self,
@@ -349,6 +354,7 @@ class PhysicalMaterial(MaterialSpec):
         gain: Any = 1.0,
         scattering_coefficient: Any = 0.0,
         xpd_coefficient: Any = 0.0,
+        conductor_model: Literal["finite", "perfect"] = "finite",
     ):
         _validate_scalar(
             eps_r, name="eps_r", minimum=0.0, strict_minimum=True
@@ -395,6 +401,10 @@ class PhysicalMaterial(MaterialSpec):
             dispersion, (DispersionSpec, PowerLawDispersion)
         ):
             raise TypeError("dispersion must implement DispersionSpec.")
+        if conductor_model not in {"finite", "perfect"}:
+            raise ValueError(
+                "conductor_model must be 'finite' or 'perfect'."
+            )
 
         object.__setattr__(self, "eps_r", eps_r)
         object.__setattr__(self, "mu_r", mu_r)
@@ -419,10 +429,13 @@ class PhysicalMaterial(MaterialSpec):
             self, "scattering_coefficient", scattering_coefficient
         )
         object.__setattr__(self, "xpd_coefficient", xpd_coefficient)
+        object.__setattr__(self, "conductor_model", conductor_model)
 
     def capabilities(self) -> MaterialCapabilities:
         return MaterialCapabilities(
-            conductive=not _is_numeric_close(self.sigma_e, 0.0),
+            conductive=self.conductor_model == "perfect"
+            or not _is_numeric_close(self.sigma_e, 0.0),
+            perfect_conductor=self.conductor_model == "perfect",
             magnetic=not _is_numeric_close(self.mu_r, 1.0),
             anisotropic=False,
             dispersive=self.dispersion is not None
@@ -431,6 +444,27 @@ class PhysicalMaterial(MaterialSpec):
             rough=self.roughness_front is not None
             or self.roughness_back is not None,
             phase_screen=False,
+        )
+
+    @classmethod
+    def perfect_conductor(
+        cls,
+        name: str | None = "perfect_conductor",
+        **kwargs,
+    ) -> PhysicalMaterial:
+        """Create an explicit PEC specification without infinite parameters."""
+
+        if "conductor_model" in kwargs:
+            raise TypeError(
+                "perfect_conductor() fixes conductor_model='perfect'."
+            )
+        return cls(
+            eps_r=1.0,
+            mu_r=1.0,
+            sigma_e=0.0,
+            name=name,
+            conductor_model="perfect",
+            **kwargs,
         )
 
     def evaluate_static(self) -> StaticMaterialSample:
@@ -468,6 +502,7 @@ Material = PhysicalMaterial
 @dataclass(frozen=True)
 class MaterialAssignment:
     assignment_id: AssignmentId
+    surface_id: SurfaceId
     material_id: MaterialId
     material: MaterialSpec
     phase_screen: PhaseScreen | None = None
@@ -493,8 +528,11 @@ class Structure:
     structure_id: StructureId | None
     material_id: MaterialId | None
     assignment_id: AssignmentId | None
+    surface_id: SurfaceId
     primitive_ids: tuple[PrimitiveId, ...] | None
     phase_screen: PhaseScreen | None
+    uv: torch.Tensor | None
+    face_uv: torch.Tensor | None
 
     def __init__(
         self,
@@ -509,8 +547,11 @@ class Structure:
         structure_id: StructureId | int | None = None,
         material_id: MaterialId | int | None = None,
         assignment_id: AssignmentId | int | None = None,
+        surface_id: SurfaceId | int | None = None,
         primitive_ids=(),
         phase_screen: PhaseScreen | None = None,
+        uv: torch.Tensor | None = None,
+        face_uv: torch.Tensor | None = None,
     ):
         if not isinstance(geometry, GeometrySpec):
             raise TypeError(
@@ -530,6 +571,54 @@ class Structure:
             normalized_primitive_ids = None
         if phase_screen is not None and not isinstance(phase_screen, PhaseScreen):
             raise TypeError("phase_screen must be a PhaseScreen or None.")
+        if (uv is None) != (face_uv is None):
+            raise ValueError("uv and face_uv must be provided together.")
+        if uv is not None:
+            if not isinstance(uv, torch.Tensor):
+                raise TypeError("uv must be a torch.Tensor.")
+            if not isinstance(face_uv, torch.Tensor):
+                raise TypeError("face_uv must be a torch.Tensor.")
+            if uv.ndim != 2 or uv.shape[1] != 2 or uv.shape[0] == 0:
+                raise ValueError("uv must have shape (T, 2) with T > 0.")
+            if not uv.dtype.is_floating_point:
+                raise TypeError("uv must use a floating-point dtype.")
+            if (
+                face_uv.ndim != 2
+                or face_uv.shape[1] != 3
+                or face_uv.shape[0] == 0
+            ):
+                raise ValueError(
+                    "face_uv must have shape (F, 3) with F > 0."
+                )
+            if face_uv.dtype not in {torch.int32, torch.int64}:
+                raise TypeError(
+                    "face_uv must use torch.int32 or torch.int64."
+                )
+            geometry_faces = getattr(geometry, "faces", None)
+            geometry_vertices = getattr(geometry, "vertices", None)
+            if not isinstance(geometry_faces, torch.Tensor):
+                raise TypeError(
+                    "uv mappings require geometry with typed mesh faces."
+                )
+            if face_uv.shape[0] != geometry_faces.shape[0]:
+                raise ValueError("face_uv must have one row per mesh face.")
+            tensor_leaves = tuple(
+                value
+                for value in (
+                    geometry_vertices,
+                    geometry_faces,
+                    uv,
+                    face_uv,
+                )
+                if isinstance(value, torch.Tensor)
+            )
+            if any(
+                value.device != tensor_leaves[0].device
+                for value in tensor_leaves[1:]
+            ):
+                raise ValueError(
+                    "Mesh and UV tensor leaves must be on the same device."
+                )
 
         object.__setattr__(self, "geometry", geometry)
         object.__setattr__(self, "material", material)
@@ -564,8 +653,17 @@ class Structure:
             if assignment_id is None
             else reserve_assignment_id(int(assignment_id)),
         )
+        object.__setattr__(
+            self,
+            "surface_id",
+            new_surface_id()
+            if surface_id is None
+            else reserve_surface_id(int(surface_id)),
+        )
         object.__setattr__(self, "primitive_ids", normalized_primitive_ids)
         object.__setattr__(self, "phase_screen", phase_screen)
+        object.__setattr__(self, "uv", uv)
+        object.__setattr__(self, "face_uv", face_uv)
 
     def primitive_id(self, local_index: int) -> PrimitiveId:
         index = int(local_index)

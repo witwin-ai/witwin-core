@@ -23,8 +23,14 @@ from .identity import (
     MaterialId,
     PrimitiveId,
     StructureId,
+    SurfaceId,
 )
-from .antenna import AntennaPattern, AntennaState
+from .antenna import (
+    AntennaPattern,
+    AntennaState,
+    ReceiverGrid,
+    antenna_orientation_matrix,
+)
 from .scene import (
     EndpointState,
     Scene,
@@ -70,6 +76,7 @@ __all__ = [
     "AntennaId",
     "AntennaPattern",
     "AntennaState",
+    "ReceiverGrid",
     "AssignmentId",
     "Deformation",
     "DeformationState",
@@ -97,9 +104,11 @@ __all__ = [
     "StaticMaterialSample",
     "Structure",
     "StructureId",
+    "SurfaceId",
     "StructureState",
     "SurfaceRoughness",
     "Trajectory",
+    "antenna_orientation_matrix",
     "quat_from_euler",
     "quat_identity",
     "quat_multiply",
