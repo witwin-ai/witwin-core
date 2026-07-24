@@ -11,6 +11,7 @@ from .base import (
     _as_vec3,
     _axial_split,
     _constant_tensor,
+    _resolve_device,
 )
 from .mesh_sdf import triangle_mesh_unsigned_distance
 from .polygon import _safe_signed_denom, convex_polygon_signed_distance_2d
@@ -85,8 +86,9 @@ class Box(GeometryBase):
     kind = "box"
 
     def __init__(self, position=(0, 0, 0), size=(1, 1, 1), rotation=None, *, device=None):
-        super().__init__(position=position, rotation=rotation, device=device)
-        self.size: torch.Tensor = _as_vec3(size, device=device)
+        resolved_device = _resolve_device(device, position, rotation, size)
+        super().__init__(position=position, rotation=rotation, device=resolved_device)
+        self.size: torch.Tensor = _as_vec3(size, device=resolved_device)
 
     def signed_distance(self, xx, yy, zz):
         dx, dy, dz = self._local_coords(xx, yy, zz)
@@ -119,8 +121,9 @@ class Sphere(GeometryBase):
     kind = "sphere"
 
     def __init__(self, position=(0, 0, 0), radius=1.0, rotation=None, *, device=None):
-        super().__init__(position=position, rotation=rotation, device=device)
-        self.radius: torch.Tensor = _as_scalar(radius, device=device)
+        resolved_device = _resolve_device(device, position, rotation, radius)
+        super().__init__(position=position, rotation=rotation, device=resolved_device)
+        self.radius: torch.Tensor = _as_scalar(radius, device=resolved_device)
 
     def signed_distance(self, xx, yy, zz):
         dx = xx - self.position[0]
@@ -164,9 +167,10 @@ class Cylinder(GeometryBase):
     kind = "cylinder"
 
     def __init__(self, position=(0, 0, 0), radius=1.0, height=1.0, axis="z", rotation=None, *, device=None):
-        super().__init__(position=position, rotation=rotation, device=device)
-        self.radius: torch.Tensor = _as_scalar(radius, device=device)
-        self.height: torch.Tensor = _as_scalar(height, device=device)
+        resolved_device = _resolve_device(device, position, rotation, radius, height)
+        super().__init__(position=position, rotation=rotation, device=resolved_device)
+        self.radius: torch.Tensor = _as_scalar(radius, device=resolved_device)
+        self.height: torch.Tensor = _as_scalar(height, device=resolved_device)
         self.axis: str = self._validate_axis(axis)
 
     def signed_distance(self, xx, yy, zz):
@@ -214,8 +218,9 @@ class Ellipsoid(GeometryBase):
     kind = "ellipsoid"
 
     def __init__(self, position=(0, 0, 0), radii=(1, 1, 1), rotation=None, *, device=None):
-        super().__init__(position=position, rotation=rotation, device=device)
-        self.radii: torch.Tensor = _as_vec3(radii, device=device)
+        resolved_device = _resolve_device(device, position, rotation, radii)
+        super().__init__(position=position, rotation=rotation, device=resolved_device)
+        self.radii: torch.Tensor = _as_vec3(radii, device=resolved_device)
 
     def signed_distance(self, xx, yy, zz):
         dx, dy, dz = self._local_coords(xx, yy, zz)
@@ -264,9 +269,10 @@ class Cone(GeometryBase):
     kind = "cone"
 
     def __init__(self, position=(0, 0, 0), radius=1.0, height=1.0, axis="z", rotation=None, *, device=None):
-        super().__init__(position=position, rotation=rotation, device=device)
-        self.radius: torch.Tensor = _as_scalar(radius, device=device)
-        self.height: torch.Tensor = _as_scalar(height, device=device)
+        resolved_device = _resolve_device(device, position, rotation, radius, height)
+        super().__init__(position=position, rotation=rotation, device=resolved_device)
+        self.radius: torch.Tensor = _as_scalar(radius, device=resolved_device)
+        self.height: torch.Tensor = _as_scalar(height, device=resolved_device)
         self.axis: str = self._validate_axis(axis)
 
     def signed_distance(self, xx, yy, zz):
@@ -311,9 +317,10 @@ class Pyramid(GeometryBase):
     kind = "pyramid"
 
     def __init__(self, position=(0, 0, 0), base_size=1.0, height=1.0, axis="z", rotation=None, *, device=None):
-        super().__init__(position=position, rotation=rotation, device=device)
-        self.base_size: torch.Tensor = _as_scalar(base_size, device=device)
-        self.height: torch.Tensor = _as_scalar(height, device=device)
+        resolved_device = _resolve_device(device, position, rotation, base_size, height)
+        super().__init__(position=position, rotation=rotation, device=resolved_device)
+        self.base_size: torch.Tensor = _as_scalar(base_size, device=resolved_device)
+        self.height: torch.Tensor = _as_scalar(height, device=resolved_device)
         self.axis: str = self._validate_axis(axis)
 
     def signed_distance(self, xx, yy, zz):
@@ -347,9 +354,10 @@ class Prism(GeometryBase):
     kind = "prism"
 
     def __init__(self, position=(0, 0, 0), radius=1.0, height=1.0, num_sides=6, axis="z", rotation=None, *, device=None):
-        super().__init__(position=position, rotation=rotation, device=device)
-        self.radius: torch.Tensor = _as_scalar(radius, device=device)
-        self.height: torch.Tensor = _as_scalar(height, device=device)
+        resolved_device = _resolve_device(device, position, rotation, radius, height)
+        super().__init__(position=position, rotation=rotation, device=resolved_device)
+        self.radius: torch.Tensor = _as_scalar(radius, device=resolved_device)
+        self.height: torch.Tensor = _as_scalar(height, device=resolved_device)
         if int(num_sides) < 3:
             raise ValueError("num_sides must be >= 3.")
         self.num_sides: int = int(num_sides)
@@ -403,9 +411,10 @@ class Torus(GeometryBase):
     kind = "torus"
 
     def __init__(self, position=(0, 0, 0), major_radius=1.0, minor_radius=0.25, axis="z", rotation=None, *, device=None):
-        super().__init__(position=position, rotation=rotation, device=device)
-        self.major_radius: torch.Tensor = _as_scalar(major_radius, device=device)
-        self.minor_radius: torch.Tensor = _as_scalar(minor_radius, device=device)
+        resolved_device = _resolve_device(device, position, rotation, major_radius, minor_radius)
+        super().__init__(position=position, rotation=rotation, device=resolved_device)
+        self.major_radius: torch.Tensor = _as_scalar(major_radius, device=resolved_device)
+        self.minor_radius: torch.Tensor = _as_scalar(minor_radius, device=resolved_device)
         self.axis: str = self._validate_axis(axis)
 
     def signed_distance(self, xx, yy, zz):
@@ -459,9 +468,10 @@ class HollowBox(GeometryBase):
     kind = "hollow_box"
 
     def __init__(self, position=(0, 0, 0), outer_size=(1, 1, 1), inner_size=(0.8, 0.8, 0.8), rotation=None, *, device=None):
-        super().__init__(position=position, rotation=rotation, device=device)
-        self.outer_size: torch.Tensor = _as_vec3(outer_size, device=device)
-        self.inner_size: torch.Tensor = _as_vec3(inner_size, device=device)
+        resolved_device = _resolve_device(device, position, rotation, outer_size, inner_size)
+        super().__init__(position=position, rotation=rotation, device=resolved_device)
+        self.outer_size: torch.Tensor = _as_vec3(outer_size, device=resolved_device)
+        self.inner_size: torch.Tensor = _as_vec3(inner_size, device=resolved_device)
 
     @property
     def size(self):

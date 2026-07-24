@@ -96,7 +96,13 @@ def test_torus_mesh_matches_analytic_extents_and_volume():
 def test_mesh_roundtrip_preserves_world_vertices_and_faces():
     base = Box(position=(0.25, -0.15, 0.4), size=(0.5, 0.3, 0.7))
     vertices, faces = base.to_mesh()
-    mesh = Mesh(vertices, faces, position=(0.0, 0.0, 0.0), recenter=False)
+    mesh = Mesh(
+        vertices,
+        faces,
+        position=(0.0, 0.0, 0.0),
+        recenter=False,
+        fill_mode="solid",
+    )
 
     roundtrip_vertices, roundtrip_faces = mesh.to_mesh()
 
@@ -129,26 +135,33 @@ def test_mesh_dynamic_views_and_bounds_follow_tensor_updates():
         dtype=torch.int64,
     )
     position = torch.nn.Parameter(torch.tensor([0.0, 0.0, 0.0], dtype=torch.float32))
-    mesh = Mesh(vertices, faces, position=position, recenter=False)
+    mesh = Mesh(
+        vertices,
+        faces,
+        position=position,
+        recenter=False,
+        fill_mode="solid",
+    )
 
-    before_vertices = mesh.world_vertices_tensor().clone()
-    before_bounds = mesh.bounds_world
+    before_vertices = mesh.world_vertices.clone()
+    before_bounds = mesh.bounds_world.clone()
     before_key = mesh.geometry_state_key()
 
     with torch.no_grad():
         position.copy_(torch.tensor([0.25, -0.10, 0.05], dtype=torch.float32))
         mesh._vertices_tensor[0, 0] = -0.75
 
-    after_vertices = mesh.world_vertices_tensor()
+    after_vertices = mesh.world_vertices
     after_bounds = mesh.bounds_world
     after_key = mesh.geometry_state_key()
 
     assert not torch.allclose(before_vertices, after_vertices)
-    assert before_bounds != after_bounds
+    assert not torch.allclose(before_bounds, after_bounds)
     assert before_key != after_key
-    np_vertices = mesh.vertices
-    assert np_vertices.shape == (8, 3)
-    assert np_vertices[0, 0] == pytest.approx(-0.75, abs=1e-6)
+    authored_vertices = mesh.vertices
+    assert authored_vertices is vertices
+    assert authored_vertices.shape == (8, 3)
+    assert authored_vertices[0, 0].item() == pytest.approx(-0.75, abs=1e-6)
 
 
 def test_mesh_sdf_cache_tracks_geometry_state_and_skips_trainable_geometry():
@@ -175,7 +188,9 @@ def test_mesh_sdf_cache_tracks_geometry_state_and_skips_trainable_geometry():
     )
     axis = torch.linspace(-0.75, 0.75, 9, dtype=torch.float32)
 
-    static_mesh = Mesh(vertices.clone(), faces, recenter=False)
+    static_mesh = Mesh(
+        vertices.clone(), faces, recenter=False, fill_mode="solid"
+    )
     before = static_mesh.signed_distance(axis, axis, axis)
     assert len(static_mesh._sdf_cache) == 1
     cached_entry = next(iter(static_mesh._sdf_cache.values()))
@@ -191,6 +206,8 @@ def test_mesh_sdf_cache_tracks_geometry_state_and_skips_trainable_geometry():
     assert not torch.allclose(before, after)
 
     trainable_vertices = torch.nn.Parameter(vertices.clone())
-    trainable_mesh = Mesh(trainable_vertices, faces, recenter=False)
+    trainable_mesh = Mesh(
+        trainable_vertices, faces, recenter=False, fill_mode="solid"
+    )
     _ = trainable_mesh.signed_distance(axis, axis, axis)
     assert trainable_mesh._sdf_cache == {}

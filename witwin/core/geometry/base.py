@@ -15,9 +15,41 @@ from ..math import (
 )
 
 
+def _devices_match(left: torch.device, right: torch.device) -> bool:
+    if left.type != right.type:
+        return False
+    return (
+        left.index is None
+        or right.index is None
+        or left.index == right.index
+    )
+
+
+def _resolve_device(explicit, *tensor_leaves) -> torch.device | None:
+    tensors = [
+        value for value in tensor_leaves if isinstance(value, torch.Tensor)
+    ]
+    resolved = torch.device(explicit) if explicit is not None else None
+    for tensor in tensors:
+        if resolved is None:
+            resolved = tensor.device
+            continue
+        if not _devices_match(resolved, tensor.device):
+            raise ValueError(
+                f"Geometry tensor device {tensor.device} conflicts with "
+                f"resolved device {resolved}."
+            )
+        if resolved.index is None:
+            resolved = tensor.device
+    return resolved
+
+
 def _as_position(value, *, device=None) -> torch.Tensor:
     if isinstance(value, torch.Tensor):
-        return value.to(device=device, dtype=torch.float32)
+        _resolve_device(device, value)
+        if value.shape != (3,):
+            raise ValueError("position must have shape (3,).")
+        return value
     return torch.tensor([float(v) for v in value], dtype=torch.float32, device=device)
 
 
@@ -26,10 +58,9 @@ def _as_rotation(value, *, device=None) -> torch.Tensor:
     if value is None:
         return quat_identity(device=device)
     if isinstance(value, torch.Tensor):
-        if value.shape == (4,):
-            return value.to(device=device, dtype=torch.float32)
-        if value.shape == (3,):
-            return quat_from_euler(value[0], value[1], value[2], device=device)
+        _resolve_device(device, value)
+        if value.shape in {(3,), (4,)}:
+            return value
         raise ValueError(f"rotation tensor must be shape (4,) quaternion or (3,) Euler, got {value.shape}")
     seq = list(value)
     if len(seq) == 4:
@@ -41,17 +72,35 @@ def _as_rotation(value, *, device=None) -> torch.Tensor:
 
 def _as_scalar(value, *, device=None) -> torch.Tensor:
     if isinstance(value, torch.Tensor):
-        return value.to(device=device, dtype=torch.float32).reshape(())
+        _resolve_device(device, value)
+        if value.shape != ():
+            raise ValueError("scalar tensor must have shape ().")
+        return value
     return torch.tensor(float(value), dtype=torch.float32, device=device)
 
 
 def _as_vec3(value, *, device=None) -> torch.Tensor:
     if isinstance(value, torch.Tensor):
-        return value.to(device=device, dtype=torch.float32)
+        _resolve_device(device, value)
+        if value.shape != (3,):
+            raise ValueError("vector tensor must have shape (3,).")
+        return value
     if isinstance(value, (int, float)):
         scalar = float(value)
         return torch.tensor([scalar, scalar, scalar], dtype=torch.float32, device=device)
     return torch.tensor([float(v) for v in value], dtype=torch.float32, device=device)
+
+
+def _rotation_quaternion(rotation: torch.Tensor) -> torch.Tensor:
+    if rotation.shape == (4,):
+        return rotation
+    return quat_from_euler(
+        rotation[0],
+        rotation[1],
+        rotation[2],
+        device=rotation.device,
+        dtype=rotation.dtype,
+    )
 
 
 def _rotate_coords(xx, yy, zz, position: torch.Tensor, rotation: torch.Tensor):
@@ -59,7 +108,7 @@ def _rotate_coords(xx, yy, zz, position: torch.Tensor, rotation: torch.Tensor):
     dx = xx - position[0]
     dy = yy - position[1]
     dz = zz - position[2]
-    rotation_matrix = quat_to_rotation_matrix(rotation)
+    rotation_matrix = quat_to_rotation_matrix(_rotation_quaternion(rotation))
     rotation_inverse = rotation_matrix.T
     dx_rot = rotation_inverse[0, 0] * dx + rotation_inverse[0, 1] * dy + rotation_inverse[0, 2] * dz
     dy_rot = rotation_inverse[1, 0] * dx + rotation_inverse[1, 1] * dy + rotation_inverse[1, 2] * dz
@@ -154,8 +203,13 @@ class GeometryBase:
     kind: str = "base"
 
     def __init__(self, position=(0, 0, 0), rotation=None, *, device=None):
-        self.position: torch.Tensor = _as_position(position, device=device)
-        self.rotation: torch.Tensor = _as_rotation(rotation, device=device)
+        resolved_device = _resolve_device(device, position, rotation)
+        self.position: torch.Tensor = _as_position(
+            position, device=resolved_device
+        )
+        self.rotation: torch.Tensor = _as_rotation(
+            rotation, device=resolved_device
+        )
 
     @property
     def device(self):
@@ -165,7 +219,7 @@ class GeometryBase:
         return _rotate_coords(xx, yy, zz, self.position, self.rotation)
 
     def _rotation_matrix_np(self) -> np.ndarray:
-        return quat_to_rotation_matrix_np(self.rotation)
+        return quat_to_rotation_matrix_np(_rotation_quaternion(self.rotation))
 
     @staticmethod
     def _validate_axis(axis: str) -> str:
@@ -180,7 +234,8 @@ class GeometryBase:
     def _transform_mesh_verts(self, vertices: torch.Tensor) -> torch.Tensor:
         if not isinstance(vertices, torch.Tensor):
             vertices = torch.as_tensor(vertices, dtype=torch.float32, device=self.device)
-        rotation_matrix = quat_to_rotation_matrix(self.rotation.to(device=vertices.device, dtype=vertices.dtype))
+        rotation = self.rotation.to(device=vertices.device, dtype=vertices.dtype)
+        rotation_matrix = quat_to_rotation_matrix(_rotation_quaternion(rotation))
         position = self.position.to(device=vertices.device, dtype=vertices.dtype)
         return vertices @ rotation_matrix.T + position
 

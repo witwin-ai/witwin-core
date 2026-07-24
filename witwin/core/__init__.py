@@ -1,14 +1,44 @@
 """Witwin Core - Shared geometry, material, and structure contracts."""
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 from .material import (
+    DispersionSpec,
     FrequencyMaterialSample,
     Material,
+    MaterialAssignment,
     MaterialCapabilities,
+    MaterialLayer,
     MaterialSpec,
+    PhaseScreen,
+    PhysicalMaterial,
+    PowerLawDispersion,
     StaticMaterialSample,
     Structure,
+    SurfaceRoughness,
+)
+from .identity import (
+    AntennaId,
+    AssignmentId,
+    MaterialId,
+    PrimitiveId,
+    StructureId,
+)
+from .antenna import AntennaPattern, AntennaState
+from .scene import (
+    EndpointState,
+    Scene,
+    SceneSnapshot,
+    SceneVersions,
+    StructureState,
+)
+from .dynamics import (
+    Deformation,
+    DeformationState,
+    DynamicScene,
+    LinearTrajectory,
+    RigidMotion,
+    Trajectory,
 )
 from .geometry import (
     Box,
@@ -37,14 +67,39 @@ __all__ = [
     "GeometrySpec",
     "Box", "Sphere", "Cylinder", "Cone", "Ellipsoid",
     "Pyramid", "Prism", "Torus", "HollowBox",
+    "AntennaId",
+    "AntennaPattern",
+    "AntennaState",
+    "AssignmentId",
+    "Deformation",
+    "DeformationState",
+    "DispersionSpec",
+    "DynamicScene",
+    "EndpointState",
     "Material",
+    "MaterialAssignment",
     "MaterialCapabilities",
+    "MaterialId",
+    "MaterialLayer",
     "MaterialSpec",
     "Mesh",
     "FrequencyMaterialSample",
     "Geometry",
+    "LinearTrajectory",
+    "PhaseScreen",
+    "PhysicalMaterial",
+    "PowerLawDispersion",
+    "PrimitiveId",
+    "RigidMotion",
+    "Scene",
+    "SceneSnapshot",
+    "SceneVersions",
     "StaticMaterialSample",
     "Structure",
+    "StructureId",
+    "StructureState",
+    "SurfaceRoughness",
+    "Trajectory",
     "quat_from_euler",
     "quat_identity",
     "quat_multiply",

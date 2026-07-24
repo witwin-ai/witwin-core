@@ -82,11 +82,16 @@ def _build_triangle_bvh(
 ) -> dict[str, np.ndarray] | None:
     if triangles.ndim != 3 or triangles.shape[1:] != (3, 3):
         raise ValueError("triangles must have shape (T, 3, 3).")
+    if triangles.device.type != "cpu":
+        raise ValueError(
+            "_build_triangle_bvh accepts CPU-authored triangles only; "
+            "CUDA geometry must use the direct device path."
+        )
     triangle_count = int(triangles.shape[0])
     if triangle_count < int(min_triangles):
         return None
 
-    triangles_np = triangles.detach().to(device="cpu", dtype=torch.float32).numpy()
+    triangles_np = triangles.detach().to(dtype=torch.float32).numpy()
     tri_min = triangles_np.min(axis=1)
     tri_max = triangles_np.max(axis=1)
     centroids = 0.5 * (tri_min + tri_max)

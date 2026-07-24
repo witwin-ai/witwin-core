@@ -358,7 +358,13 @@ def test_mesh_occupancy_has_gradients_for_vertices():
 
 def test_mesh_watertight_detection_rejects_inconsistent_orientation():
     vertices, faces = _cube_mesh_with_flipped_face(size=1.0)
-    mesh = Mesh(vertices, faces, recenter=False, fill_mode="auto")
+    mesh = Mesh(
+        vertices.numpy(),
+        faces.numpy(),
+        recenter=False,
+        fill_mode="auto",
+        topology_diagnostics=True,
+    )
 
     assert mesh.is_watertight is False
     assert mesh.boundary_edge_count == 0
@@ -368,7 +374,13 @@ def test_mesh_watertight_detection_rejects_inconsistent_orientation():
 
 def test_mesh_watertight_detection_rejects_degenerate_faces():
     vertices, faces = _cube_mesh_with_degenerate_face(size=1.0)
-    mesh = Mesh(vertices, faces, recenter=False, fill_mode="auto")
+    mesh = Mesh(
+        vertices.numpy(),
+        faces.numpy(),
+        recenter=False,
+        fill_mode="auto",
+        topology_diagnostics=True,
+    )
 
     assert mesh.is_watertight is False
     assert mesh.degenerate_face_count > 0
@@ -525,11 +537,17 @@ def test_mesh_cuda_signed_distance_point_gradients_match_torch_reference():
     assert torch.allclose(actual_points.grad, ref_points.grad, atol=2.0e-3, rtol=2.0e-3)
 
 
-def test_mesh_cuda_static_surface_bvh_matches_unsigned_distance_reference():
+def test_mesh_cuda_static_surface_cpu_authored_bvh_matches_unsigned_distance_reference():
     _require_cuda_mesh_sdf()
     device = torch.device("cuda")
     vertices, faces = _grid_plane_mesh(resolution=24, size=1.0)
-    mesh = Mesh(vertices, faces, recenter=False, fill_mode="surface", surface_thickness=0.05, device=device)
+    mesh = Mesh(
+        vertices,
+        faces,
+        recenter=False,
+        fill_mode="surface",
+        surface_thickness=0.05,
+    )
 
     points = torch.tensor(
         [
@@ -550,7 +568,7 @@ def test_mesh_cuda_static_surface_bvh_matches_unsigned_distance_reference():
     assert torch.allclose(actual, reference, atol=5.0e-4, rtol=5.0e-4)
 
 
-def test_mesh_cuda_static_solid_bvh_matches_signed_distance_reference_away_from_boundary():
+def test_mesh_cuda_static_solid_direct_path_matches_signed_distance_reference_away_from_boundary():
     _require_cuda_mesh_sdf()
     device = torch.device("cuda")
     sphere = Sphere(radius=0.6)
@@ -573,7 +591,7 @@ def test_mesh_cuda_static_solid_bvh_matches_signed_distance_reference_away_from_
     actual = mesh.signed_distance(x, y, z).reshape(-1)
 
     cached_entry = next(iter(mesh._sdf_cache.values()))
-    assert cached_entry["bvh"] is not None
+    assert cached_entry["bvh"] is None
 
     reference = triangle_mesh_smooth_signed_distance(points, cached_entry["vertices"], cached_entry["faces"], _triangles=cached_entry["triangles"])
     assert torch.allclose(actual, reference, atol=2.0e-3, rtol=2.0e-3)
