@@ -7,7 +7,6 @@ from witwin.core import (
     AntennaPattern,
     AntennaState,
     Box,
-    Material,
     Mesh,
     PhysicalMaterial,
     Scene,
@@ -27,7 +26,6 @@ def test_material_and_structure_keep_continuous_tensor_identity():
 
     scene = Scene(structures=[structure], endpoints=[antenna])
 
-    assert Material is PhysicalMaterial
     assert material.eps_r is eps_r
     assert material.sigma_e is sigma_e
     assert scene.structures[0].geometry.position is position
@@ -407,3 +405,20 @@ def test_mesh_keeps_surface_thickness_tensor_identity():
     point = torch.tensor(0.0, dtype=torch.float64)
     mesh.signed_distance(point, point, point).backward()
     assert thickness.grad is not None
+
+
+def test_core_exports_exactly_one_public_material_name():
+    """``PhysicalMaterial`` is the only public name for the material contract."""
+
+    import witwin.core as core
+
+    assert "Material" not in core.__all__
+    assert not hasattr(core, "Material")
+    assert core.PhysicalMaterial.__module__ == "witwin.core.material"
+
+
+def test_structure_contracts_live_in_the_structure_module():
+    import witwin.core as core
+
+    assert core.Structure.__module__ == "witwin.core.structure"
+    assert core.MaterialAssignment.__module__ == "witwin.core.structure"

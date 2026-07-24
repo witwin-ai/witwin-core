@@ -9,7 +9,9 @@ import torch
 
 from .antenna import AntennaState
 from .identity import MaterialId, StructureId
-from .material import MaterialAssignment, MaterialSpec, PhaseScreen, Structure
+from .material import MaterialSpec, PhaseScreen
+from .scalars import ScalarLike
+from .structure import MaterialAssignment, Structure
 
 
 def _version(value: int, *, name: str) -> int:
@@ -157,7 +159,7 @@ class EndpointState:
 
 @dataclass(frozen=True, init=False)
 class SceneSnapshot:
-    time_s: Any
+    time_s: ScalarLike
     _topology_version: int
     _geometry_version: int
     _material_version: int
@@ -174,7 +176,7 @@ class SceneSnapshot:
     def __init__(
         self,
         *,
-        time_s: Any,
+        time_s: ScalarLike,
         topology_version: int,
         geometry_version: int,
         material_version: int,
@@ -781,7 +783,7 @@ class Scene:
             metadata=self.metadata,
         )
 
-    def snapshot(self, time_s: Any = 0.0) -> SceneSnapshot:
+    def snapshot(self, time_s: ScalarLike = 0.0) -> SceneSnapshot:
         return SceneSnapshot(
             time_s=time_s,
             topology_version=self._versions.topology,

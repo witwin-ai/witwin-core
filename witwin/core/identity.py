@@ -1,3 +1,25 @@
+"""Stable logical identities for Core world contracts.
+
+Two allocation modes exist, and the difference matters to any caller that
+compares results across processes.
+
+``new_*_id()`` draws from a process-global monotonic counter. IDs are unique
+and stable for the lifetime of one process, but they depend on how many
+objects were constructed earlier in that process. The same scene description
+built in a different order, or in a different process, gets a different set of
+IDs.
+
+``reserve_*_id(value)`` records a caller-chosen identity verbatim. This is the
+mode to use whenever IDs must be reproducible: a scene loaded from a file, a
+scene compared against a stored result, or an ``EndpointBatch.stable_ids``
+vector that has to mean the same thing in a later run. Solver-owned compilers
+key their caches on these identities, so a caller that mixes the two modes for
+one logical world can defeat cache reuse.
+
+Core does not derive IDs from content. Choosing a reproducible identity scheme
+is the caller's decision, not a Core default.
+"""
+
 from __future__ import annotations
 
 from threading import Lock

@@ -9,6 +9,7 @@ from typing import Any, Literal, Mapping
 import torch
 
 from .identity import AntennaId, reserve_antenna_id
+from .scalars import ScalarLike
 
 
 _PATTERN_KINDS = frozenset(
@@ -107,7 +108,7 @@ class AntennaState:
     weights: torch.Tensor | None
     synthetic_array: bool
     pattern: AntennaPattern
-    power_w: Any | None
+    power_w: ScalarLike | None
     metadata: Mapping[str, Any]
 
     def __init__(
@@ -122,7 +123,7 @@ class AntennaState:
         weights=None,
         synthetic_array: bool = True,
         pattern: AntennaPattern | str = "isotropic",
-        power_w: Any | None = None,
+        power_w: ScalarLike | None = None,
         metadata: Mapping[str, Any] | None = None,
     ) -> None:
         if role not in {"tx", "rx"}:

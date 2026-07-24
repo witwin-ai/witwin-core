@@ -3,28 +3,13 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from numbers import Real
-from types import MappingProxyType
-from typing import Any, Literal, Mapping, Protocol, runtime_checkable
+from typing import Literal, Protocol, runtime_checkable
 
 import numpy as np
 import torch
 
-from .geometry.base import GeometrySpec
-from .identity import (
-    AssignmentId,
-    MaterialId,
-    PrimitiveId,
-    StructureId,
-    SurfaceId,
-    new_assignment_id,
-    new_material_id,
-    new_structure_id,
-    new_surface_id,
-    reserve_assignment_id,
-    reserve_material_id,
-    reserve_structure_id,
-    reserve_surface_id,
-)
+from .identity import MaterialId, new_material_id, reserve_material_id
+from .scalars import ComplexLike, ScalarLike
 
 VACUUM_PERMITTIVITY = 8.8541878128e-12
 
@@ -37,13 +22,13 @@ def _version_value(value: int) -> int:
 
 
 def _validate_scalar(
-    value: Any,
+    value: ScalarLike,
     *,
     name: str,
     minimum: float | None = None,
     maximum: float | None = None,
     strict_minimum: bool = False,
-) -> Any:
+) -> ScalarLike:
     """Validate Python scalars without observing tensor values on the host."""
 
     if isinstance(value, torch.Tensor):
@@ -67,17 +52,17 @@ def _validate_scalar(
     return value
 
 
-def _is_numeric_close(value: Any, target: float) -> bool:
+def _is_numeric_close(value: ScalarLike, target: float) -> bool:
     if isinstance(value, torch.Tensor) or not isinstance(value, Real):
         return False
     return bool(np.isclose(float(value), target))
 
 
 def _complex_permittivity(
-    eps_r: Any,
-    sigma_e: Any,
-    frequency_hz: Any,
-) -> Any:
+    eps_r: ScalarLike,
+    sigma_e: ScalarLike,
+    frequency_hz: ScalarLike,
+) -> ComplexLike:
     tensors = tuple(
         value
         for value in (eps_r, sigma_e, frequency_hz)
@@ -135,21 +120,21 @@ class MaterialCapabilities:
 
 @dataclass(frozen=True)
 class StaticMaterialSample:
-    eps_r: Any
-    mu_r: Any = 1.0
-    sigma_e: Any = 0.0
+    eps_r: ScalarLike
+    mu_r: ScalarLike = 1.0
+    sigma_e: ScalarLike = 0.0
 
 
 @dataclass(frozen=True)
 class FrequencyMaterialSample:
-    eps_r: Any
-    mu_r: Any = 1.0
-    sigma_e: Any = 0.0
+    eps_r: ScalarLike
+    mu_r: ScalarLike = 1.0
+    sigma_e: ScalarLike = 0.0
 
 
 @runtime_checkable
 class DispersionSpec(Protocol):
-    def complex_eps(self, frequency_hz: Any) -> Any:
+    def complex_eps(self, frequency_hz: ScalarLike) -> ComplexLike:
         ...
 
 
@@ -157,9 +142,9 @@ class DispersionSpec(Protocol):
 class PowerLawDispersion:
     """Solver-neutral power-law material dispersion."""
 
-    reference_frequency_hz: Any
-    eps_r_exponent: Any = 0.0
-    sigma_e_exponent: Any = 0.0
+    reference_frequency_hz: ScalarLike
+    eps_r_exponent: ScalarLike = 0.0
+    sigma_e_exponent: ScalarLike = 0.0
 
     def __post_init__(self) -> None:
         _validate_scalar(
@@ -169,11 +154,11 @@ class PowerLawDispersion:
             strict_minimum=True,
         )
 
-    def scale(self, frequency_hz: Any) -> tuple[Any, Any]:
+    def scale(self, frequency_hz: ScalarLike) -> tuple[ScalarLike, ScalarLike]:
         ratio = frequency_hz / self.reference_frequency_hz
         return ratio**self.eps_r_exponent, ratio**self.sigma_e_exponent
 
-    def complex_eps(self, frequency_hz: Any) -> Any:
+    def complex_eps(self, frequency_hz: ScalarLike) -> ComplexLike:
         raise TypeError(
             "PowerLawDispersion requires the owning PhysicalMaterial base values; "
             "use PhysicalMaterial.evaluate_at_frequency()."
@@ -184,10 +169,10 @@ class PowerLawDispersion:
 class MaterialLayer:
     """One homogeneous logical layer in a physical material."""
 
-    thickness_m: Any
-    eps_r: Any = 1.0
-    sigma_e: Any = 0.0
-    mu_r: Any = 1.0
+    thickness_m: ScalarLike
+    eps_r: ScalarLike = 1.0
+    sigma_e: ScalarLike = 0.0
+    mu_r: ScalarLike = 1.0
     dispersion: DispersionSpec | None = None
 
     def __post_init__(self) -> None:
@@ -209,7 +194,9 @@ class MaterialLayer:
         ):
             raise TypeError("dispersion must implement DispersionSpec.")
 
-    def evaluate_at_frequency(self, frequency_hz: Any) -> FrequencyMaterialSample:
+    def evaluate_at_frequency(
+        self, frequency_hz: ScalarLike
+    ) -> FrequencyMaterialSample:
         if isinstance(self.dispersion, PowerLawDispersion):
             eps_scale, sigma_scale = self.dispersion.scale(frequency_hz)
             eps_r = _complex_permittivity(
@@ -234,10 +221,10 @@ class MaterialLayer:
 class SurfaceRoughness:
     """Logical Gaussian-correlated surface roughness."""
 
-    rms_height_m: Any
-    correlation_length_x_m: Any
-    correlation_length_y_m: Any
-    principal_axis_rad: Any = 0.0
+    rms_height_m: ScalarLike
+    correlation_length_x_m: ScalarLike
+    correlation_length_y_m: ScalarLike
+    principal_axis_rad: ScalarLike = 0.0
     correlation: str = "gaussian"
 
     def __post_init__(self) -> None:
@@ -266,12 +253,12 @@ class PhaseScreen:
     """Logical phase-screen descriptor; native storage remains solver-owned."""
 
     height: torch.Tensor
-    height_scale_m: Any
-    height_offset_m: Any = 0.0
+    height_scale_m: ScalarLike
+    height_offset_m: ScalarLike = 0.0
     realization_id: int = 0
     mode: str = "realization_coherent"
     correlation: SurfaceRoughness | None = None
-    quadrature_tolerance: Any = 1.0e-4
+    quadrature_tolerance: ScalarLike = 1.0e-4
 
     def __post_init__(self) -> None:
         if not isinstance(self.height, torch.Tensor):
@@ -311,7 +298,9 @@ class MaterialSpec(Protocol):
     def evaluate_static(self) -> StaticMaterialSample:
         ...
 
-    def evaluate_at_frequency(self, frequency: Any) -> FrequencyMaterialSample:
+    def evaluate_at_frequency(
+        self, frequency: ScalarLike
+    ) -> FrequencyMaterialSample:
         ...
 
 
@@ -319,41 +308,41 @@ class MaterialSpec(Protocol):
 class PhysicalMaterial(MaterialSpec):
     """Canonical solver-neutral electromagnetic and surface material."""
 
-    eps_r: Any
-    mu_r: Any
-    sigma_e: Any
+    eps_r: ScalarLike
+    mu_r: ScalarLike
+    sigma_e: ScalarLike
     name: str | None
     material_id: MaterialId
     version: int
-    thickness_m: Any
+    thickness_m: ScalarLike
     layers: tuple[MaterialLayer, ...]
     geometry_mode: str
     roughness_front: SurfaceRoughness | None
     roughness_back: SurfaceRoughness | None
     dispersion: DispersionSpec | PowerLawDispersion | None
-    gain: Any
-    scattering_coefficient: Any
-    xpd_coefficient: Any
+    gain: ScalarLike
+    scattering_coefficient: ScalarLike
+    xpd_coefficient: ScalarLike
     conductor_model: Literal["finite", "perfect"]
 
     def __init__(
         self,
-        eps_r: Any = 1.0,
-        mu_r: Any = 1.0,
-        sigma_e: Any = 0.0,
+        eps_r: ScalarLike = 1.0,
+        mu_r: ScalarLike = 1.0,
+        sigma_e: ScalarLike = 0.0,
         name: str | None = None,
         *,
         material_id: MaterialId | int | None = None,
         version: int = 0,
-        thickness_m: Any = 0.1,
+        thickness_m: ScalarLike = 0.1,
         layers=(),
         geometry_mode: str = "thin_sheet",
         roughness_front: SurfaceRoughness | None = None,
         roughness_back: SurfaceRoughness | None = None,
         dispersion: DispersionSpec | PowerLawDispersion | None = None,
-        gain: Any = 1.0,
-        scattering_coefficient: Any = 0.0,
-        xpd_coefficient: Any = 0.0,
+        gain: ScalarLike = 1.0,
+        scattering_coefficient: ScalarLike = 0.0,
+        xpd_coefficient: ScalarLike = 0.0,
         conductor_model: Literal["finite", "perfect"] = "finite",
     ):
         _validate_scalar(
@@ -474,7 +463,9 @@ class PhysicalMaterial(MaterialSpec):
             sigma_e=self.sigma_e,
         )
 
-    def evaluate_at_frequency(self, frequency: Any) -> FrequencyMaterialSample:
+    def evaluate_at_frequency(
+        self, frequency: ScalarLike
+    ) -> FrequencyMaterialSample:
         eps_r = self.eps_r
         sigma_e = self.sigma_e
         if isinstance(self.dispersion, PowerLawDispersion):
@@ -491,189 +482,3 @@ class PhysicalMaterial(MaterialSpec):
             mu_r=self.mu_r,
             sigma_e=sigma_e,
         )
-
-
-# ``Material`` and ``PhysicalMaterial`` are two public names for one canonical
-# implementation. This preserves existing Core/Maxwell construction without a
-# parallel adapter or compatibility subclass.
-Material = PhysicalMaterial
-
-
-@dataclass(frozen=True)
-class MaterialAssignment:
-    assignment_id: AssignmentId
-    surface_id: SurfaceId
-    material_id: MaterialId
-    material: MaterialSpec
-    phase_screen: PhaseScreen | None = None
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.material, MaterialSpec):
-            raise TypeError("material must implement MaterialSpec.")
-        if self.phase_screen is not None and not isinstance(
-            self.phase_screen, PhaseScreen
-        ):
-            raise TypeError("phase_screen must be a PhaseScreen or None.")
-
-
-@dataclass(frozen=True, init=False)
-class Structure:
-    geometry: GeometrySpec
-    material: MaterialSpec
-    name: str | None
-    priority: int
-    enabled: bool
-    tags: tuple[str, ...]
-    metadata: Mapping[str, Any]
-    structure_id: StructureId | None
-    material_id: MaterialId | None
-    assignment_id: AssignmentId | None
-    surface_id: SurfaceId
-    primitive_ids: tuple[PrimitiveId, ...] | None
-    phase_screen: PhaseScreen | None
-    uv: torch.Tensor | None
-    face_uv: torch.Tensor | None
-
-    def __init__(
-        self,
-        geometry: GeometrySpec,
-        material: MaterialSpec,
-        name: str | None = None,
-        priority: int = 0,
-        enabled: bool = True,
-        tags=(),
-        metadata: Mapping[str, Any] | None = None,
-        *,
-        structure_id: StructureId | int | None = None,
-        material_id: MaterialId | int | None = None,
-        assignment_id: AssignmentId | int | None = None,
-        surface_id: SurfaceId | int | None = None,
-        primitive_ids=(),
-        phase_screen: PhaseScreen | None = None,
-        uv: torch.Tensor | None = None,
-        face_uv: torch.Tensor | None = None,
-    ):
-        if not isinstance(geometry, GeometrySpec):
-            raise TypeError(
-                "Structure geometry must implement GeometrySpec (kind and to_mesh())."
-            )
-        if not isinstance(material, MaterialSpec):
-            raise TypeError(
-                "Structure material must implement MaterialSpec "
-                "(name, capabilities(), evaluate_static(), and evaluate_at_frequency())."
-            )
-        normalized_primitive_ids = (
-            None
-            if primitive_ids is None
-            else tuple(PrimitiveId(int(value)) for value in primitive_ids)
-        )
-        if normalized_primitive_ids == ():
-            normalized_primitive_ids = None
-        if phase_screen is not None and not isinstance(phase_screen, PhaseScreen):
-            raise TypeError("phase_screen must be a PhaseScreen or None.")
-        if (uv is None) != (face_uv is None):
-            raise ValueError("uv and face_uv must be provided together.")
-        if uv is not None:
-            if not isinstance(uv, torch.Tensor):
-                raise TypeError("uv must be a torch.Tensor.")
-            if not isinstance(face_uv, torch.Tensor):
-                raise TypeError("face_uv must be a torch.Tensor.")
-            if uv.ndim != 2 or uv.shape[1] != 2 or uv.shape[0] == 0:
-                raise ValueError("uv must have shape (T, 2) with T > 0.")
-            if not uv.dtype.is_floating_point:
-                raise TypeError("uv must use a floating-point dtype.")
-            if (
-                face_uv.ndim != 2
-                or face_uv.shape[1] != 3
-                or face_uv.shape[0] == 0
-            ):
-                raise ValueError(
-                    "face_uv must have shape (F, 3) with F > 0."
-                )
-            if face_uv.dtype not in {torch.int32, torch.int64}:
-                raise TypeError(
-                    "face_uv must use torch.int32 or torch.int64."
-                )
-            geometry_faces = getattr(geometry, "faces", None)
-            geometry_vertices = getattr(geometry, "vertices", None)
-            if not isinstance(geometry_faces, torch.Tensor):
-                raise TypeError(
-                    "uv mappings require geometry with typed mesh faces."
-                )
-            if face_uv.shape[0] != geometry_faces.shape[0]:
-                raise ValueError("face_uv must have one row per mesh face.")
-            tensor_leaves = tuple(
-                value
-                for value in (
-                    geometry_vertices,
-                    geometry_faces,
-                    uv,
-                    face_uv,
-                )
-                if isinstance(value, torch.Tensor)
-            )
-            if any(
-                value.device != tensor_leaves[0].device
-                for value in tensor_leaves[1:]
-            ):
-                raise ValueError(
-                    "Mesh and UV tensor leaves must be on the same device."
-                )
-
-        object.__setattr__(self, "geometry", geometry)
-        object.__setattr__(self, "material", material)
-        object.__setattr__(self, "name", None if name is None else str(name))
-        object.__setattr__(self, "priority", int(priority))
-        object.__setattr__(self, "enabled", bool(enabled))
-        object.__setattr__(self, "tags", tuple(str(tag) for tag in tags))
-        object.__setattr__(
-            self, "metadata", MappingProxyType(dict(metadata or {}))
-        )
-        object.__setattr__(
-            self,
-            "structure_id",
-            new_structure_id()
-            if structure_id is None
-            else reserve_structure_id(int(structure_id)),
-        )
-        if material_id is None:
-            inherited_material_id = getattr(material, "material_id", None)
-            resolved_material_id = (
-                new_material_id()
-                if inherited_material_id is None
-                else reserve_material_id(int(inherited_material_id))
-            )
-        else:
-            resolved_material_id = reserve_material_id(int(material_id))
-        object.__setattr__(self, "material_id", resolved_material_id)
-        object.__setattr__(
-            self,
-            "assignment_id",
-            new_assignment_id()
-            if assignment_id is None
-            else reserve_assignment_id(int(assignment_id)),
-        )
-        object.__setattr__(
-            self,
-            "surface_id",
-            new_surface_id()
-            if surface_id is None
-            else reserve_surface_id(int(surface_id)),
-        )
-        object.__setattr__(self, "primitive_ids", normalized_primitive_ids)
-        object.__setattr__(self, "phase_screen", phase_screen)
-        object.__setattr__(self, "uv", uv)
-        object.__setattr__(self, "face_uv", face_uv)
-
-    def primitive_id(self, local_index: int) -> PrimitiveId:
-        index = int(local_index)
-        if index < 0:
-            raise ValueError("local_index must be non-negative.")
-        if index >= (1 << 32):
-            raise ValueError("local_index must fit in 32 bits.")
-        if self.primitive_ids is not None:
-            try:
-                return self.primitive_ids[index]
-            except IndexError as exc:
-                raise IndexError("local_index is outside primitive_ids.") from exc
-        return PrimitiveId((int(self.structure_id) << 32) | index)

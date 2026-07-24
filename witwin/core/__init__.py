@@ -5,8 +5,6 @@ __version__ = "0.4.0"
 from .material import (
     DispersionSpec,
     FrequencyMaterialSample,
-    Material,
-    MaterialAssignment,
     MaterialCapabilities,
     MaterialLayer,
     MaterialSpec,
@@ -14,8 +12,15 @@ from .material import (
     PhysicalMaterial,
     PowerLawDispersion,
     StaticMaterialSample,
-    Structure,
     SurfaceRoughness,
+)
+from .scalars import (
+    ComplexLike,
+    ScalarLike,
+)
+from .structure import (
+    MaterialAssignment,
+    Structure,
 )
 from .identity import (
     AntennaId,
@@ -78,12 +83,12 @@ __all__ = [
     "AntennaState",
     "ReceiverGrid",
     "AssignmentId",
+    "ComplexLike",
     "Deformation",
     "DeformationState",
     "DispersionSpec",
     "DynamicScene",
     "EndpointState",
-    "Material",
     "MaterialAssignment",
     "MaterialCapabilities",
     "MaterialId",
@@ -98,6 +103,7 @@ __all__ = [
     "PowerLawDispersion",
     "PrimitiveId",
     "RigidMotion",
+    "ScalarLike",
     "Scene",
     "SceneSnapshot",
     "SceneVersions",

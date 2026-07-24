@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from types import MappingProxyType
-from typing import Any, Mapping, Protocol, runtime_checkable
+from typing import Mapping, Protocol, runtime_checkable
 
 import torch
 
 from .identity import AntennaId, StructureId
+from .scalars import ScalarLike
 from .scene import EndpointState, Scene, SceneSnapshot, StructureState
 
 
@@ -148,13 +149,13 @@ class DeformationState:
 
 @runtime_checkable
 class Trajectory(Protocol):
-    def at(self, time_s: Any) -> RigidMotion:
+    def at(self, time_s: ScalarLike) -> RigidMotion:
         ...
 
 
 @runtime_checkable
 class Deformation(Protocol):
-    def at(self, time_s: Any) -> DeformationState:
+    def at(self, time_s: ScalarLike) -> DeformationState:
         ...
 
 
@@ -208,7 +209,7 @@ class LinearTrajectory:
         if any(value.dtype != tensor_leaves[0].dtype for value in tensor_leaves[1:]):
             raise ValueError("Trajectory tensor leaves must use the same dtype.")
 
-    def at(self, time_s: Any) -> RigidMotion:
+    def at(self, time_s: ScalarLike) -> RigidMotion:
         if (
             isinstance(time_s, torch.Tensor)
             and time_s.device != self.origin.device
@@ -312,7 +313,7 @@ class DynamicScene:
         )
         object.__setattr__(self, "dynamic_revision", revision)
 
-    def at(self, time_s: Any) -> SceneSnapshot:
+    def at(self, time_s: ScalarLike) -> SceneSnapshot:
         if isinstance(time_s, torch.Tensor) and time_s.ndim != 0:
             raise ValueError("time_s tensor must be scalar.")
         resolved_time = time_s

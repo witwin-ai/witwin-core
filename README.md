@@ -63,6 +63,22 @@ effective conductivity constants.
 - CUDA-authored meshes do not run host topology diagnostics or build a host BVH.
   `fill_mode="auto"` therefore requires an explicit topology decision before
   an SDF query.
+- `Material` is removed. `PhysicalMaterial` is the only public name for the
+  material contract; the two were aliases of one class. Replace
+  `from witwin.core import Material` with
+  `from witwin.core import PhysicalMaterial`.
+- `Structure` and `MaterialAssignment` now live in `witwin.core.structure`
+  rather than `witwin.core.material`, which keeps only material specifications.
+  Both remain exported from `witwin.core`, so package-level imports are
+  unaffected.
+- Continuous physical quantities are annotated `ScalarLike`
+  (`float | torch.Tensor`) instead of `Any`. `ScalarLike` and `ComplexLike` are
+  exported from `witwin.core`. This is a typing change only; the accepted
+  runtime values are unchanged.
+- `witwin.core.identity` documents its two allocation modes. Use
+  `reserve_*_id(value)` whenever identities must be reproducible across
+  processes; `new_*_id()` draws from a process-global counter and is
+  order-dependent.
 
 ## Related Solvers
 
