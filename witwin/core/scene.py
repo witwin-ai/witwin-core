@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Mapping
 from dataclasses import dataclass, fields, is_dataclass, replace
 from types import MappingProxyType
-from typing import Any, Mapping
+from typing import Any
 
 import torch
 
@@ -21,67 +22,142 @@ def _version(value: int, *, name: str) -> int:
     return resolved
 
 
+# Scene version properties walk the whole world model on every read, and
+# `witwin.channel.scene.compile` reads all four before it consults its cache, so
+# this traversal sits on the per-solve path. Its cost was dominated by per-node
+# type dispatch rather than by hashing, so the walk resolves each node's kind
+# once per class and short-circuits scalar leaves. The emitted state tuples are
+# unchanged, and so are the version values derived from them.
+
+_ATOMIC_TYPES = frozenset(
+    {type(None), bool, int, float, complex, str, bytes, bytearray}
+)
+
+_KIND_TENSOR = 0
+_KIND_MAPPING = 1
+_KIND_SEQUENCE = 2
+_KIND_DATACLASS = 3
+_KIND_CLASS = 4
+_KIND_OBJECT = 5
+
+_KIND_BY_CLASS: dict[type, int] = {}
+_FIELD_NAMES_BY_CLASS: dict[type, tuple[str, ...]] = {}
+_DEVICE_TEXT: dict[torch.device, str] = {}
+_DTYPE_TEXT: dict[torch.dtype, str] = {}
+
+
+def _node_kind(cls: type) -> int:
+    kind = _KIND_BY_CLASS.get(cls)
+    if kind is not None:
+        return kind
+    if issubclass(cls, torch.Tensor):
+        kind = _KIND_TENSOR
+    elif issubclass(cls, type):
+        # A class object reaches the dataclass branch on its own merits, so it
+        # cannot share the instance dispatch below.
+        kind = _KIND_CLASS
+    elif issubclass(cls, Mapping):
+        kind = _KIND_MAPPING
+    elif issubclass(cls, (tuple, list)):
+        kind = _KIND_SEQUENCE
+    elif is_dataclass(cls):
+        kind = _KIND_DATACLASS
+        _FIELD_NAMES_BY_CLASS[cls] = tuple(field.name for field in fields(cls))
+    else:
+        kind = _KIND_OBJECT
+    _KIND_BY_CLASS[cls] = kind
+    return kind
+
+
+def _collect_tensor_states(
+    value, seen: set[int], include_identity: bool, out: list[tuple]
+) -> None:
+    if type(value) in _ATOMIC_TYPES:
+        return
+    object_id = id(value)
+    if object_id in seen:
+        return
+    seen.add(object_id)
+
+    node_type = type(value)
+    kind = _KIND_BY_CLASS.get(node_type)
+    if kind is None:
+        kind = _node_kind(node_type)
+
+    if kind == _KIND_TENSOR:
+        device = value.device
+        device_text = _DEVICE_TEXT.get(device)
+        if device_text is None:
+            device_text = str(device)
+            _DEVICE_TEXT[device] = device_text
+        dtype = value.dtype
+        dtype_text = _DTYPE_TEXT.get(dtype)
+        if dtype_text is None:
+            dtype_text = str(dtype)
+            _DTYPE_TEXT[dtype] = dtype_text
+        identity = (object_id, value.data_ptr()) if include_identity else ()
+        out.append(
+            (
+                *identity,
+                device_text,
+                dtype_text,
+                tuple(value.shape),
+                tuple(value.stride()),
+                bool(value.requires_grad),
+                int(getattr(value, "_version", 0)),
+            )
+        )
+        return
+
+    # Most children are scalar leaves - dataclass fields such as eps_r, a name,
+    # or a version counter. Testing them here rather than on entry keeps them
+    # from costing a call each, which is what the recursion spends its time on.
+    if kind == _KIND_MAPPING:
+        for key in sorted(value, key=repr):
+            item = value[key]
+            if type(item) not in _ATOMIC_TYPES:
+                _collect_tensor_states(item, seen, include_identity, out)
+        return
+
+    if kind == _KIND_SEQUENCE:
+        for item in value:
+            if type(item) not in _ATOMIC_TYPES:
+                _collect_tensor_states(item, seen, include_identity, out)
+        return
+
+    if kind == _KIND_DATACLASS:
+        for name in _FIELD_NAMES_BY_CLASS[node_type]:
+            item = getattr(value, name)
+            if type(item) not in _ATOMIC_TYPES:
+                _collect_tensor_states(item, seen, include_identity, out)
+        return
+
+    if kind == _KIND_CLASS and is_dataclass(value):
+        for field in fields(value):
+            item = getattr(value, field.name)
+            if type(item) not in _ATOMIC_TYPES:
+                _collect_tensor_states(item, seen, include_identity, out)
+        return
+
+    instance_dict = getattr(value, "__dict__", None)
+    if instance_dict is None:
+        return
+    for name, item in sorted(instance_dict.items()):
+        if type(item) not in _ATOMIC_TYPES and not name.endswith("_cache"):
+            _collect_tensor_states(item, seen, include_identity, out)
+
+
 def _tensor_states(
     value,
     *,
     seen: set[int] | None = None,
     include_identity: bool = True,
 ) -> tuple[tuple, ...]:
-    if seen is None:
-        seen = set()
-    object_id = id(value)
-    if object_id in seen:
-        return ()
-    seen.add(object_id)
-    if isinstance(value, torch.Tensor):
-        identity = (object_id, value.data_ptr()) if include_identity else ()
-        return (
-            (
-                *identity,
-                str(value.device),
-                str(value.dtype),
-                tuple(value.shape),
-                tuple(value.stride()),
-                bool(value.requires_grad),
-                int(getattr(value, "_version", 0)),
-            ),
-        )
-    if isinstance(value, Mapping):
-        return tuple(
-            state
-            for key in sorted(value, key=lambda item: repr(item))
-            for state in _tensor_states(
-                value[key], seen=seen, include_identity=include_identity
-            )
-        )
-    if isinstance(value, (tuple, list)):
-        return tuple(
-            state
-            for item in value
-            for state in _tensor_states(
-                item, seen=seen, include_identity=include_identity
-            )
-        )
-    if is_dataclass(value):
-        return tuple(
-            state
-            for field in fields(value)
-            for state in _tensor_states(
-                getattr(value, field.name),
-                seen=seen,
-                include_identity=include_identity,
-            )
-        )
-    if hasattr(value, "__dict__"):
-        return tuple(
-            state
-            for name, item in sorted(vars(value).items())
-            if not name.endswith("_cache")
-            for state in _tensor_states(
-                item, seen=seen, include_identity=include_identity
-            )
-        )
-    return ()
+    states: list[tuple] = []
+    _collect_tensor_states(
+        value, set() if seen is None else seen, include_identity, states
+    )
+    return tuple(states)
 
 
 def _state_version(
