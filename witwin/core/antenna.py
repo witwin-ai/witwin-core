@@ -9,7 +9,7 @@ from typing import Any, Literal, Mapping
 import torch
 
 from .identity import AntennaId, reserve_antenna_id
-from .scalars import ScalarLike
+from .math import ScalarLike
 
 
 _PATTERN_KINDS = frozenset(

@@ -14,10 +14,6 @@ from .material import (
     StaticMaterialSample,
     SurfaceRoughness,
 )
-from .scalars import (
-    ComplexLike,
-    ScalarLike,
-)
 from .structure import (
     MaterialAssignment,
     Structure,
@@ -29,6 +25,16 @@ from .identity import (
     PrimitiveId,
     StructureId,
     SurfaceId,
+    new_antenna_id,
+    new_assignment_id,
+    new_material_id,
+    new_structure_id,
+    new_surface_id,
+    reserve_antenna_id,
+    reserve_assignment_id,
+    reserve_material_id,
+    reserve_structure_id,
+    reserve_surface_id,
 )
 from .antenna import (
     AntennaPattern,
@@ -67,6 +73,9 @@ from .geometry import (
     Torus,
 )
 from .math import (
+    ComplexLike,
+    ScalarLike,
+    normalize_vec3,
     quat_from_euler,
     quat_identity,
     quat_multiply,
@@ -115,9 +124,20 @@ __all__ = [
     "SurfaceRoughness",
     "Trajectory",
     "antenna_orientation_matrix",
+    "normalize_vec3",
+    "new_antenna_id",
+    "new_assignment_id",
+    "new_material_id",
+    "new_structure_id",
+    "new_surface_id",
     "quat_from_euler",
     "quat_identity",
     "quat_multiply",
     "quat_to_rotation_matrix",
     "quat_to_rotation_matrix_np",
+    "reserve_antenna_id",
+    "reserve_assignment_id",
+    "reserve_material_id",
+    "reserve_structure_id",
+    "reserve_surface_id",
 ]

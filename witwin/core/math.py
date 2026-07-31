@@ -1,11 +1,18 @@
-"""Vector, quaternion, and rotation utilities for geometry types."""
+"""Shared numeric types and math utilities for Core contracts."""
 
 from __future__ import annotations
 
-from typing import Sequence
+from typing import Sequence, TypeAlias
 
 import numpy as np
 import torch
+
+
+ScalarLike: TypeAlias = float | torch.Tensor
+"""A real scalar: a Python number, or a 0-dim floating-point tensor."""
+
+ComplexLike: TypeAlias = complex | torch.Tensor
+"""A complex scalar: a Python complex, or a complex/real tensor."""
 
 
 # ---------------------------------------------------------------------------
@@ -55,6 +62,21 @@ def _rotation_matrix_np(angles) -> np.ndarray:
     ry = np.array([[cp, 0.0, sp], [0.0, 1.0, 0.0], [-sp, 0.0, cp]], dtype=np.float32)
     rz = np.array([[cy, -sy, 0.0], [sy, cy, 0.0], [0.0, 0.0, 1.0]], dtype=np.float32)
     return (rz @ ry @ rx).astype(np.float32, copy=False)
+
+
+# ---------------------------------------------------------------------------
+# Vector utilities (torch)
+# ---------------------------------------------------------------------------
+
+def normalize_vec3(values: torch.Tensor, *, eps: float = 1.0e-12) -> torch.Tensor:
+    """Scale trailing-axis vectors to unit length (differentiable).
+
+    ``eps`` clamps the norm from below so a zero vector maps to zero rather
+    than to NaN.
+    """
+    return values / torch.linalg.vector_norm(
+        values, dim=-1, keepdim=True
+    ).clamp_min(eps)
 
 
 # ---------------------------------------------------------------------------
@@ -111,3 +133,15 @@ def quat_multiply(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
 def quat_to_rotation_matrix_np(q: torch.Tensor) -> np.ndarray:
     """Convert quaternion to 3x3 numpy rotation matrix."""
     return quat_to_rotation_matrix(q).detach().cpu().numpy()
+
+
+__all__ = [
+    "ComplexLike",
+    "ScalarLike",
+    "normalize_vec3",
+    "quat_from_euler",
+    "quat_identity",
+    "quat_multiply",
+    "quat_to_rotation_matrix",
+    "quat_to_rotation_matrix_np",
+]

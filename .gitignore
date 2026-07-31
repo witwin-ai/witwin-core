@@ -226,6 +226,9 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# Native CUDA mesh SDF prebuilt extensions (built per-platform in CI)
-witwin/core/geometry/cuda/prebuilt/*.pyd
-witwin/core/geometry/cuda/prebuilt/*.so
+# Repository-local agent and test scratch directories
+.pytest_tmp/
+.codex_tmp/
+.codex-tmp/
+.test-tmp/
+.tmp/

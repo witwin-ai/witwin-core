@@ -7,7 +7,7 @@ from typing import Mapping, Protocol, runtime_checkable
 import torch
 
 from .identity import AntennaId, StructureId
-from .scalars import ScalarLike
+from .math import ScalarLike
 from .scene import EndpointState, Scene, SceneSnapshot, StructureState
 
 

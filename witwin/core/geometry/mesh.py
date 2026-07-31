@@ -17,6 +17,7 @@ from .base import (
 )
 from .mesh_sdf import (
     _build_triangle_bvh,
+    _mesh_sdf_available,
     _triangle_bvh_to_device,
     triangle_mesh_signed_distance_static_bvh,
     triangle_mesh_smooth_signed_distance,
@@ -582,6 +583,7 @@ class Mesh(GeometryBase):
             and dtype == torch.float32
             and self.vertices.device.type == "cpu"
             and self.faces.device.type == "cpu"
+            and _mesh_sdf_available()
         ):
             cpu_vertices = self._world_vertices(
                 device=torch.device("cpu"),

@@ -11,7 +11,7 @@ import torch
 from .antenna import AntennaState
 from .identity import MaterialId, StructureId
 from .material import MaterialSpec, PhaseScreen
-from .scalars import ScalarLike
+from .math import ScalarLike
 from .structure import MaterialAssignment, Structure
 
 

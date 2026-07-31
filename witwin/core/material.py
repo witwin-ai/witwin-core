@@ -9,7 +9,7 @@ import numpy as np
 import torch
 
 from .identity import MaterialId, new_material_id, reserve_material_id
-from .scalars import ComplexLike, ScalarLike
+from .math import ComplexLike, ScalarLike
 
 VACUUM_PERMITTIVITY = 8.8541878128e-12
 

@@ -1,4 +1,4 @@
-"""Torch-native and native-CUDA triangle-mesh distance helpers."""
+"""Torch-native triangle-mesh distance helpers with optional solver acceleration."""
 
 from __future__ import annotations
 
@@ -8,9 +8,9 @@ import numpy as np
 import torch
 
 
-_MESH_SDF_MODULE_UNSET = object()
-_MESH_SDF_MODULE: object | None = _MESH_SDF_MODULE_UNSET
-_MESH_SDF_BUILD_ERROR: str | None = None
+_MESH_SDF_ACCELERATOR: object | None = None
+_MESH_SDF_ACCELERATOR_ERROR: str | None = None
+_MESH_SDF_ACCELERATOR_FAILED = False
 _MESH_SDF_BVH_LEAF_SIZE = 8
 _MESH_SDF_BVH_MIN_TRIANGLES = 1024
 
@@ -23,49 +23,51 @@ def _safe_signed_denom(value: torch.Tensor, eps: float) -> torch.Tensor:
     return torch.where(value >= 0.0, value.clamp_min(eps), value.clamp_max(-eps))
 
 
-def _get_mesh_sdf_module():
-    """Return the native CUDA mesh-SDF module, or None if it cannot be built.
+def _register_mesh_sdf_accelerator(accelerator: object) -> None:
+    """Install a solver-owned mesh-SDF accelerator.
 
-    The module is compiled once via ``torch.utils.cpp_extension`` and cached.
-    A build failure (missing toolchain, no CUDA) is recorded and downgraded to
-    ``None`` so callers transparently fall back to the Torch-native path.
+    Core remains independently usable through its PyTorch implementation.
+    Solver packages may register an accelerator when they are imported.
     """
-    global _MESH_SDF_MODULE, _MESH_SDF_BUILD_ERROR
-    if _MESH_SDF_MODULE is _MESH_SDF_MODULE_UNSET:
-        if not torch.cuda.is_available():
-            _MESH_SDF_MODULE = None
-        else:
-            try:
-                from .cuda import get_native_mesh_sdf_module
+    global _MESH_SDF_ACCELERATOR, _MESH_SDF_ACCELERATOR_ERROR
+    global _MESH_SDF_ACCELERATOR_FAILED
+    _MESH_SDF_ACCELERATOR = accelerator
+    _MESH_SDF_ACCELERATOR_ERROR = None
+    _MESH_SDF_ACCELERATOR_FAILED = False
 
-                _MESH_SDF_MODULE = get_native_mesh_sdf_module()
-            except Exception as exc:  # noqa: BLE001 - degrade to Torch fallback
-                _MESH_SDF_BUILD_ERROR = f"{type(exc).__name__}: {exc}"
-                _MESH_SDF_MODULE = None
-    return _MESH_SDF_MODULE
+
+def _get_mesh_sdf_accelerator():
+    global _MESH_SDF_ACCELERATOR_ERROR, _MESH_SDF_ACCELERATOR_FAILED
+    accelerator = _MESH_SDF_ACCELERATOR
+    if accelerator is None or _MESH_SDF_ACCELERATOR_FAILED:
+        return None
+    try:
+        if not accelerator.is_available():
+            return None
+    except Exception as exc:  # noqa: BLE001 - retain the PyTorch path
+        _MESH_SDF_ACCELERATOR_ERROR = f"{type(exc).__name__}: {exc}"
+        _MESH_SDF_ACCELERATOR_FAILED = True
+        return None
+    return accelerator
 
 
 def _mesh_sdf_available() -> bool:
-    return _get_mesh_sdf_module() is not None
+    return _get_mesh_sdf_accelerator() is not None
+
+
+def _select_mesh_sdf_accelerator(
+    points: torch.Tensor,
+    vertices: torch.Tensor,
+):
+    accelerator = _MESH_SDF_ACCELERATOR
+    if accelerator is None or not accelerator.supports(points, vertices):
+        return None
+    return _get_mesh_sdf_accelerator()
 
 
 def _mesh_sdf_build_error() -> str | None:
-    """Return the last native-CUDA build error message, if any."""
-    return _MESH_SDF_BUILD_ERROR
-
-
-def _should_use_native(points: torch.Tensor, vertices: torch.Tensor) -> bool:
-    return (
-        points.device.type == "cuda"
-        and vertices.device.type == "cuda"
-        and points.dtype == torch.float32
-        and vertices.dtype == torch.float32
-        and _mesh_sdf_available()
-    )
-
-
-def _launch_shape_1d(length: int, block_size: int) -> tuple[int, int, int]:
-    return ((length + block_size - 1) // block_size, 1, 1)
+    """Return the last solver-accelerator loading error, if any."""
+    return _MESH_SDF_ACCELERATOR_ERROR
 
 
 def _indexed_triangles(vertices: torch.Tensor, faces: torch.Tensor) -> torch.Tensor:
@@ -345,153 +347,15 @@ def _triangle_mesh_winding_angle_torch(
     )
 
 
-def _launch_native_unsigned_distance(
-    triangles: torch.Tensor,
-    points: torch.Tensor,
-) -> tuple[torch.Tensor, torch.Tensor]:
-    module = _get_mesh_sdf_module()
-    if module is None:
-        raise RuntimeError("Native CUDA mesh SDF module is not available.")
-    if points.shape[0] == 0:
-        empty_f = torch.empty((0,), device=points.device, dtype=torch.float32)
-        empty_i = torch.empty((0,), device=points.device, dtype=torch.int32)
-        return empty_f, empty_i
-
-    query_points = points.detach().contiguous()
-    query_triangles = triangles.detach().contiguous()
-    distances = torch.empty((points.shape[0],), device=points.device, dtype=torch.float32)
-    closest = torch.empty((points.shape[0],), device=points.device, dtype=torch.int32)
-    block_size = (256, 1, 1)
-
-    module.queryMeshUnsignedDistance(
-        triangles=query_triangles,
-        points=query_points,
-        unsignedDistance=distances,
-        closestTriangleIndex=closest,
-    ).launchRaw(
-        blockSize=block_size,
-        gridSize=_launch_shape_1d(points.shape[0], block_size[0]),
-    )
-
-    return distances, closest
-
-
-def _launch_native_unsigned_distance_bvh(
-    triangles: torch.Tensor,
-    points: torch.Tensor,
-    bvh: dict[str, torch.Tensor],
-) -> tuple[torch.Tensor, torch.Tensor]:
-    module = _get_mesh_sdf_module()
-    if module is None:
-        raise RuntimeError("Native CUDA mesh SDF module is not available.")
-    if points.shape[0] == 0:
-        empty_f = torch.empty((0,), device=points.device, dtype=torch.float32)
-        empty_i = torch.empty((0,), device=points.device, dtype=torch.int32)
-        return empty_f, empty_i
-
-    query_points = points.detach().contiguous()
-    query_triangles = triangles.detach().contiguous()
-    distances = torch.empty((points.shape[0],), device=points.device, dtype=torch.float32)
-    closest = torch.empty((points.shape[0],), device=points.device, dtype=torch.int32)
-    block_size = (256, 1, 1)
-
-    module.queryMeshUnsignedDistanceBVH(
-        triangles=query_triangles,
-        points=query_points,
-        nodeBBoxMin=bvh["bbox_min"],
-        nodeBBoxMax=bvh["bbox_max"],
-        nodeLeft=bvh["left"],
-        nodeRight=bvh["right"],
-        nodeStart=bvh["start"],
-        nodeCount=bvh["count"],
-        triangleIndices=bvh["triangle_indices"],
-        unsignedDistance=distances,
-        closestTriangleIndex=closest,
-    ).launchRaw(
-        blockSize=block_size,
-        gridSize=_launch_shape_1d(points.shape[0], block_size[0]),
-    )
-
-    return distances, closest
-
-
-def _launch_native_parity_sign_bvh(
-    triangles: torch.Tensor,
-    points: torch.Tensor,
-    bvh: dict[str, torch.Tensor],
-    *,
-    jitter_scale: float = 1.0e-6,
-) -> torch.Tensor:
-    module = _get_mesh_sdf_module()
-    if module is None:
-        raise RuntimeError("Native CUDA mesh SDF module is not available.")
-    if points.shape[0] == 0:
-        return torch.empty((0,), device=points.device, dtype=torch.int32)
-
-    inside = torch.empty((points.shape[0],), device=points.device, dtype=torch.int32)
-    block_size = (256, 1, 1)
-    module.queryMeshParitySignBVH(
-        triangles=triangles.detach().contiguous(),
-        points=points.detach().contiguous(),
-        nodeBBoxMin=bvh["bbox_min"],
-        nodeBBoxMax=bvh["bbox_max"],
-        nodeLeft=bvh["left"],
-        nodeRight=bvh["right"],
-        nodeStart=bvh["start"],
-        nodeCount=bvh["count"],
-        triangleIndices=bvh["triangle_indices"],
-        jitterScale=float(jitter_scale),
-        inside=inside,
-    ).launchRaw(
-        blockSize=block_size,
-        gridSize=_launch_shape_1d(points.shape[0], block_size[0]),
-    )
-    return inside
-
-
-def _launch_native_distance_and_winding(
-    triangles: torch.Tensor,
-    points: torch.Tensor,
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    module = _get_mesh_sdf_module()
-    if module is None:
-        raise RuntimeError("Native CUDA mesh SDF module is not available.")
-    if points.shape[0] == 0:
-        empty_f = torch.empty((0,), device=points.device, dtype=torch.float32)
-        empty_i = torch.empty((0,), device=points.device, dtype=torch.int32)
-        return empty_f, empty_f.clone(), empty_i
-
-    query_points = points.detach().contiguous()
-    query_triangles = triangles.detach().contiguous()
-    distances = torch.empty((points.shape[0],), device=points.device, dtype=torch.float32)
-    winding_angles = torch.empty((points.shape[0],), device=points.device, dtype=torch.float32)
-    closest = torch.empty((points.shape[0],), device=points.device, dtype=torch.int32)
-    block_size = (256, 1, 1)
-
-    module.queryMeshDistanceAndWinding(
-        triangles=query_triangles,
-        points=query_points,
-        unsignedDistance=distances,
-        windingAngle=winding_angles,
-        closestTriangleIndex=closest,
-    ).launchRaw(
-        blockSize=block_size,
-        gridSize=_launch_shape_1d(points.shape[0], block_size[0]),
-    )
-
-    return distances, winding_angles, closest
-
-
 def triangle_mesh_unsigned_distance_static_bvh(
     points: torch.Tensor,
     triangles: torch.Tensor,
     bvh: dict[str, torch.Tensor] | None,
 ) -> torch.Tensor:
-    if bvh is None:
-        distances, _closest = _launch_native_unsigned_distance(triangles, points)
-    else:
-        distances, _closest = _launch_native_unsigned_distance_bvh(triangles, points, bvh)
-    return distances.to(dtype=points.dtype)
+    accelerator = _select_mesh_sdf_accelerator(points, triangles)
+    if accelerator is not None:
+        return accelerator.unsigned_distance_static_bvh(points, triangles, bvh)
+    return _triangle_mesh_unsigned_distance_torch_from_triangles(points, triangles)
 
 
 def triangle_mesh_signed_distance_static_bvh(
@@ -499,162 +363,22 @@ def triangle_mesh_signed_distance_static_bvh(
     triangles: torch.Tensor,
     bvh: dict[str, torch.Tensor] | None,
 ) -> torch.Tensor:
-    if bvh is None:
-        distances, _winding_angles, _closest = _launch_native_distance_and_winding(triangles, points)
-        parity_inside = torch.signbit(_signed_distance_from_unsigned_and_winding(
-            distances.to(dtype=points.dtype),
-            _winding_angles.to(dtype=points.dtype),
-            winding_beta=0.5,
-        )).to(dtype=torch.int32)
-    else:
-        distances, _closest = _launch_native_unsigned_distance_bvh(triangles, points, bvh)
-        parity_inside = _launch_native_parity_sign_bvh(triangles, points, bvh)
-
-    sign = torch.where(
-        parity_inside.to(dtype=torch.bool),
-        -torch.ones_like(distances, dtype=points.dtype),
-        torch.ones_like(distances, dtype=points.dtype),
+    accelerator = _select_mesh_sdf_accelerator(points, triangles)
+    if accelerator is not None:
+        return accelerator.signed_distance_static_bvh(points, triangles, bvh)
+    unsigned_distance = _triangle_mesh_unsigned_distance_torch_from_triangles(
+        points,
+        triangles,
     )
-    return distances.to(dtype=points.dtype) * sign
-
-
-def _launch_native_unsigned_backward(
-    triangles: torch.Tensor,
-    points: torch.Tensor,
-    closest_triangle_index: torch.Tensor,
-    grad_unsigned_distance: torch.Tensor,
-) -> tuple[torch.Tensor, torch.Tensor]:
-    module = _get_mesh_sdf_module()
-    if module is None:
-        raise RuntimeError("Native CUDA mesh SDF module is not available.")
-    if points.shape[0] == 0:
-        return torch.zeros_like(triangles), torch.zeros_like(points)
-
-    grad_triangles = torch.zeros_like(triangles)
-    grad_points = torch.zeros_like(points)
-    block_size = (256, 1, 1)
-    module.backwardMeshUnsignedDistance(
-        triangles=triangles.detach().contiguous(),
-        points=points.detach().contiguous(),
-        closestTriangleIndex=closest_triangle_index.detach().contiguous(),
-        gradUnsignedDistance=grad_unsigned_distance.detach().contiguous(),
-        gradTriangles=grad_triangles,
-        gradPoints=grad_points,
-    ).launchRaw(
-        blockSize=block_size,
-        gridSize=_launch_shape_1d(points.shape[0], block_size[0]),
+    winding_angle = _triangle_mesh_winding_angle_torch_from_triangles(
+        points,
+        triangles,
     )
-    return grad_triangles, grad_points
-
-
-def _launch_native_distance_and_winding_backward(
-    triangles: torch.Tensor,
-    points: torch.Tensor,
-    closest_triangle_index: torch.Tensor,
-    grad_unsigned_distance: torch.Tensor,
-    grad_winding_angle: torch.Tensor,
-) -> tuple[torch.Tensor, torch.Tensor]:
-    module = _get_mesh_sdf_module()
-    if module is None:
-        raise RuntimeError("Native CUDA mesh SDF module is not available.")
-    if points.shape[0] == 0:
-        return torch.zeros_like(triangles), torch.zeros_like(points)
-
-    grad_triangles = torch.zeros_like(triangles)
-    grad_points = torch.zeros_like(points)
-    block_size = (256, 1, 1)
-    module.backwardMeshDistanceAndWinding(
-        triangles=triangles.detach().contiguous(),
-        points=points.detach().contiguous(),
-        closestTriangleIndex=closest_triangle_index.detach().contiguous(),
-        gradUnsignedDistance=grad_unsigned_distance.detach().contiguous(),
-        gradWindingAngle=grad_winding_angle.detach().contiguous(),
-        gradTriangles=grad_triangles,
-        gradPoints=grad_points,
-    ).launchRaw(
-        blockSize=block_size,
-        gridSize=_launch_shape_1d(points.shape[0], block_size[0]),
+    return _signed_distance_from_unsigned_and_winding(
+        unsigned_distance,
+        winding_angle,
+        winding_beta=0.5,
     )
-    return grad_triangles, grad_points
-
-
-class _TriangleMeshUnsignedDistanceFunction(torch.autograd.Function):
-    @staticmethod
-    def forward(ctx, triangles: torch.Tensor, points: torch.Tensor) -> torch.Tensor:
-        distances, closest_triangle_index = _launch_native_unsigned_distance(triangles, points)
-        ctx.save_for_backward(triangles.detach(), points.detach(), closest_triangle_index)
-        return distances
-
-    @staticmethod
-    def backward(ctx, grad_output: torch.Tensor):
-        triangles, points, closest_triangle_index = ctx.saved_tensors
-        grad_triangles, grad_points = _launch_native_unsigned_backward(
-            triangles,
-            points,
-            closest_triangle_index,
-            grad_output.to(device=triangles.device, dtype=torch.float32),
-        )
-        return grad_triangles, grad_points
-
-
-class _TriangleMeshWindingAngleFunction(torch.autograd.Function):
-    @staticmethod
-    def forward(ctx, triangles: torch.Tensor, points: torch.Tensor) -> torch.Tensor:
-        _unsigned_distance, winding_angle, closest_triangle_index = _launch_native_distance_and_winding(triangles, points)
-        ctx.save_for_backward(triangles.detach(), points.detach(), closest_triangle_index)
-        return winding_angle
-
-    @staticmethod
-    def backward(ctx, grad_output: torch.Tensor):
-        triangles, points, closest_triangle_index = ctx.saved_tensors
-        zeros = torch.zeros_like(grad_output, device=triangles.device, dtype=torch.float32)
-        grad_triangles, grad_points = _launch_native_distance_and_winding_backward(
-            triangles,
-            points,
-            closest_triangle_index,
-            zeros,
-            grad_output.to(device=triangles.device, dtype=torch.float32),
-        )
-        return grad_triangles, grad_points
-
-
-class _TriangleMeshSignedDistanceFunction(torch.autograd.Function):
-    @staticmethod
-    def forward(ctx, triangles: torch.Tensor, points: torch.Tensor, winding_beta: float) -> torch.Tensor:
-        unsigned_distance, winding_angle, closest_triangle_index = _launch_native_distance_and_winding(triangles, points)
-        signed_distance = _signed_distance_from_unsigned_and_winding(unsigned_distance, winding_angle, winding_beta)
-        ctx.winding_beta = float(winding_beta)
-        ctx.save_for_backward(
-            triangles.detach(),
-            points.detach(),
-            closest_triangle_index,
-            unsigned_distance,
-            winding_angle,
-        )
-        return signed_distance
-
-    @staticmethod
-    def backward(ctx, grad_output: torch.Tensor):
-        triangles, points, closest_triangle_index, unsigned_distance, winding_angle = ctx.saved_tensors
-        beta = grad_output.new_tensor(float(ctx.winding_beta))
-        shifted = (torch.abs(winding_angle) - 2.0 * math.pi) / beta
-        tanh_shifted = torch.tanh(shifted)
-        sign_factor = -tanh_shifted
-        grad_unsigned_distance = grad_output.to(device=triangles.device, dtype=torch.float32) * sign_factor
-        grad_winding_angle = (
-            grad_output.to(device=triangles.device, dtype=torch.float32)
-            * unsigned_distance
-            * (-(1.0 - tanh_shifted.square()) / beta)
-            * torch.sign(winding_angle)
-        )
-        grad_triangles, grad_points = _launch_native_distance_and_winding_backward(
-            triangles,
-            points,
-            closest_triangle_index,
-            grad_unsigned_distance,
-            grad_winding_angle,
-        )
-        return grad_triangles, grad_points, None
 
 
 def triangle_mesh_unsigned_distance(
@@ -667,11 +391,9 @@ def triangle_mesh_unsigned_distance(
     _triangles: torch.Tensor | None = None,
 ) -> torch.Tensor:
     triangles = _indexed_triangles(vertices, faces) if _triangles is None else _triangles
-    if _should_use_native(points, vertices):
-        if torch.is_grad_enabled() and (triangles.requires_grad or points.requires_grad):
-            return _TriangleMeshUnsignedDistanceFunction.apply(triangles, points.contiguous())
-        primal, _closest_triangle_index = _launch_native_unsigned_distance(triangles, points)
-        return primal.to(dtype=points.dtype)
+    accelerator = _select_mesh_sdf_accelerator(points, vertices)
+    if accelerator is not None:
+        return accelerator.unsigned_distance(points, triangles)
 
     return _triangle_mesh_unsigned_distance_torch_from_triangles(
         points,
@@ -691,11 +413,9 @@ def triangle_mesh_winding_angle(
     _triangles: torch.Tensor | None = None,
 ) -> torch.Tensor:
     triangles = _indexed_triangles(vertices, faces) if _triangles is None else _triangles
-    if _should_use_native(points, vertices):
-        if torch.is_grad_enabled() and (triangles.requires_grad or points.requires_grad):
-            return _TriangleMeshWindingAngleFunction.apply(triangles, points.contiguous())
-        _unsigned_distance, winding_angle, _closest_triangle_index = _launch_native_distance_and_winding(triangles, points)
-        return winding_angle.to(dtype=points.dtype)
+    accelerator = _select_mesh_sdf_accelerator(points, vertices)
+    if accelerator is not None:
+        return accelerator.winding_angle(points, triangles)
 
     return _triangle_mesh_winding_angle_torch_from_triangles(
         points,
@@ -742,17 +462,12 @@ def triangle_mesh_smooth_signed_distance(
     _triangles: torch.Tensor | None = None,
 ) -> torch.Tensor:
     triangles = _indexed_triangles(vertices, faces) if _triangles is None else _triangles
-    if _should_use_native(points, vertices):
-        if torch.is_grad_enabled() and (triangles.requires_grad or points.requires_grad):
-            return _TriangleMeshSignedDistanceFunction.apply(triangles, points.contiguous(), float(winding_beta))
-        primal_unsigned_distance, primal_winding_angle, _closest_triangle_index = _launch_native_distance_and_winding(
-            triangles,
+    accelerator = _select_mesh_sdf_accelerator(points, vertices)
+    if accelerator is not None:
+        return accelerator.smooth_signed_distance(
             points,
-        )
-        return _signed_distance_from_unsigned_and_winding(
-            primal_unsigned_distance.to(dtype=points.dtype),
-            primal_winding_angle.to(dtype=points.dtype),
-            winding_beta,
+            triangles,
+            winding_beta=float(winding_beta),
         )
 
     return _triangle_mesh_smooth_signed_distance_torch(

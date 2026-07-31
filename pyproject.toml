@@ -7,10 +7,6 @@ name = "witwin"
 version = "0.4.0"
 description = "Witwin shared logical-world, geometry, material, and dynamics contracts"
 readme = "README.md"
-# Matches RayD/rayd-torch 0.7.0. Core's only extension is the mesh-SDF module,
-# which uses the LibTorch Stable ABI (torch/csrc/stable/library.h), so the
-# distribution is not pinned to one CPython. Channel remains the narrow one:
-# its versioned _channel extension is CPython 3.11 / Torch 2.10.0 only.
 requires-python = ">=3.10,<3.15"
 license = "MIT"
 
@@ -31,14 +27,3 @@ all     = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["witwin"]
-artifacts = [
-    "witwin/core/geometry/cuda/**/*.cpp",
-    "witwin/core/geometry/cuda/**/*.cu",
-    "witwin/core/geometry/cuda/**/*.cuh",
-    "witwin/core/geometry/cuda/**/*.h",
-    "witwin/core/geometry/cuda/prebuilt/**/*.pyd",
-    "witwin/core/geometry/cuda/prebuilt/**/*.so",
-]
-
-[tool.hatch.build.hooks.custom]
-path = "hatch_build.py"
