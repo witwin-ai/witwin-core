@@ -1,0 +1,54 @@
+FFF.F                                                                    [100%]
+=================================== FAILURES ===================================
+_ test_received_trainable_structure_assignment_control_is_not_silently_replaced[priority] _
+
+kind = 'priority'
+
+    @pytest.mark.parametrize('kind',('priority','enabled','nested_enabled'))
+    def test_received_trainable_structure_assignment_control_is_not_silently_replaced(kind):
+        theta=torch.tensor(2.,dtype=torch.float64,requires_grad=True)
+        kwargs={'enabled':(theta,)} if kind=='nested_enabled' else {kind:theta}
+>       with pytest.raises(NotImplementedError,match='fixed assignment control'):
+E       Failed: DID NOT RAISE NotImplementedError
+
+tests/test_fixed_assignment_controls.py:12: Failed
+_ test_received_trainable_structure_assignment_control_is_not_silently_replaced[enabled] _
+
+kind = 'enabled'
+
+    @pytest.mark.parametrize('kind',('priority','enabled','nested_enabled'))
+    def test_received_trainable_structure_assignment_control_is_not_silently_replaced(kind):
+        theta=torch.tensor(2.,dtype=torch.float64,requires_grad=True)
+        kwargs={'enabled':(theta,)} if kind=='nested_enabled' else {kind:theta}
+>       with pytest.raises(NotImplementedError,match='fixed assignment control'):
+E       Failed: DID NOT RAISE NotImplementedError
+
+tests/test_fixed_assignment_controls.py:12: Failed
+_ test_received_trainable_structure_assignment_control_is_not_silently_replaced[nested_enabled] _
+
+kind = 'nested_enabled'
+
+    @pytest.mark.parametrize('kind',('priority','enabled','nested_enabled'))
+    def test_received_trainable_structure_assignment_control_is_not_silently_replaced(kind):
+        theta=torch.tensor(2.,dtype=torch.float64,requires_grad=True)
+        kwargs={'enabled':(theta,)} if kind=='nested_enabled' else {kind:theta}
+>       with pytest.raises(NotImplementedError,match='fixed assignment control'):
+E       Failed: DID NOT RAISE NotImplementedError
+
+tests/test_fixed_assignment_controls.py:12: Failed
+___ test_object_array_nested_assignment_control_cannot_hide_tensor_ancestry ____
+
+    def test_object_array_nested_assignment_control_cannot_hide_tensor_ancestry():
+        import numpy as np
+        value=torch.tensor(1.,requires_grad=True)
+        nested=np.empty(1,dtype=object);nested[0]=value
+>       with pytest.raises(NotImplementedError,match='fixed assignment control'):
+E       Failed: DID NOT RAISE NotImplementedError
+
+tests/test_fixed_assignment_controls.py:30: Failed
+=========================== short test summary info ============================
+FAILED tests/test_fixed_assignment_controls.py::test_received_trainable_structure_assignment_control_is_not_silently_replaced[priority]
+FAILED tests/test_fixed_assignment_controls.py::test_received_trainable_structure_assignment_control_is_not_silently_replaced[enabled]
+FAILED tests/test_fixed_assignment_controls.py::test_received_trainable_structure_assignment_control_is_not_silently_replaced[nested_enabled]
+FAILED tests/test_fixed_assignment_controls.py::test_object_array_nested_assignment_control_cannot_hide_tensor_ancestry
+4 failed, 1 passed in 0.89s

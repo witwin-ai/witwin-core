@@ -12,6 +12,7 @@ from types import MappingProxyType
 from typing import Any, Mapping
 
 import torch
+import numpy as np
 
 from .geometry.base import GeometrySpec
 from .identity import (
@@ -33,6 +34,22 @@ from .material import MaterialSpec, PhaseScreen
 
 
 __all__ = ["MaterialAssignment", "Structure"]
+
+
+def _require_fixed_assignment_control(value, *, name):
+    """Discrete assignment controls have no registered differentiable path."""
+    if isinstance(value, torch.Tensor):
+        if value.requires_grad:
+            raise NotImplementedError(f"Trainable Structure.{name} is unsupported; provide a fixed assignment control.")
+    elif isinstance(value, np.ndarray) and value.dtype == object:
+        for item in value.flat:
+            _require_fixed_assignment_control(item, name=name)
+    elif isinstance(value, Mapping):
+        for item in value.values():
+            _require_fixed_assignment_control(item, name=name)
+    elif isinstance(value, (tuple, list)):
+        for item in value:
+            _require_fixed_assignment_control(item, name=name)
 
 
 @dataclass(frozen=True)
@@ -89,6 +106,8 @@ class Structure:
         uv: torch.Tensor | None = None,
         face_uv: torch.Tensor | None = None,
     ):
+        _require_fixed_assignment_control(priority, name="priority")
+        _require_fixed_assignment_control(enabled, name="enabled")
         if not isinstance(geometry, GeometrySpec):
             raise TypeError(
                 "Structure geometry must implement GeometrySpec (kind and to_mesh())."

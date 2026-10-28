@@ -1,0 +1,107 @@
+{
+  "before": {
+    "core": {
+      "module_file": "/tmp/pcb-core-fixed-assignment-baseline-20261028/witwin/core/__init__.py",
+      "sources": {
+        "__init__.py": "c62f9be910ebfdb24621dcde0039b200e28751a3f47c1a0f5963a6425052face",
+        "antenna.py": "b9eb4bf1346ac28d374bc306b7828117f2f0021e9e74b516d7886208aeb1608d",
+        "dynamics.py": "c27ef9f55af8ecfda7aa474a56ca3e820b15982e1e853d88027e5a04e915523e",
+        "geometry/__init__.py": "89240d5760c0b870e28f3d16dc21a34a71e87087b5ab9c4874a56867f31899c8",
+        "geometry/base.py": "57881efe8059fd38357539c0dc1437ef7ca9bd3dc17c66e6c15e6518be078a54",
+        "geometry/mesh.py": "35040e8cf149399c827c7488a3f8cb691acaa103d13d8e5b58c7615dad29fd94",
+        "geometry/mesh_sdf.py": "6fafe5eff5827fcffd4b4c165f6f1c14777b680c2eff50d7a4500a92b2b25d27",
+        "geometry/polygon.py": "6d7a3cf2a49ab9dea938ee73067bbaa3a300f81c84286e1a402d00d051fcd831",
+        "geometry/primitives.py": "edd915d595d3ba23f1934003f28ec4239d5d2a01e5cfb46c9275c2a5c8b6fdf4",
+        "identity.py": "5b0fc9caac1478b8847c7c84f51d740a0b5b34232ade556feba8d0b9f8a5645f",
+        "material.py": "ff6aeb6a12c393bd0a9bda43c7a464e90b9dd309501936f1bae0dd526a6ed560",
+        "math.py": "2fd79ae1d4f2106d936ffb8003957de2b7ac1a7e4c83ab1a286b72409bdf0aeb",
+        "scene.py": "7157cf840857c19c050f9f7c02329cf92095db374e63d8b77bd0c99c5db424c9",
+        "structure.py": "049242712bc4405986eeb614cf5129c8fd5e39986ed69790b85b3b044e016546"
+      },
+      "source_sha256": "373afab7ff14ad516f534fbcea05829ca9f24d0cb20452e3e8c3b5336b9ad8a4"
+    },
+    "controls": {
+      "tests/conftest.py": "70011e0c7b2a7fef891fe6120103e4c8d2c58123cb9f7cb952f4e16c3fbbccbc",
+      "tests/test_channel_contract_gaps.py": "3bf8f4ba605c626f764515f17cf86640df3ef9285898c95a85c79bc07922f22f",
+      "tests/test_contracts.py": "678d1cae43031ed50ab9a8983de2f5c962ae4d502a660d9ab0efe8e5cbe995ea",
+      "tests/test_dependency_contract.py": "9aac373650f50ba22cce4611b152e6f9a086bcbfd6c095f27ce50cfb14a74d40",
+      "tests/test_distribution_contract.py": "bc7db77b0e50bd0a3ed976e6973962c25fc1faf5a9edc6905896accc97ee003e",
+      "tests/test_dynamics_contracts.py": "57173fe015167082a8147a129d2db439487755b4edb6c307cde651cc540be2df",
+      "tests/test_fixed_assignment_controls.py": "d2b7488d83249768313b12424a3017b13e8ca9b523d8adb840f3d8be7403212a",
+      "tests/test_geometry_sdf.py": "c22a883c0733753b26285c694c5fe46d578b8515b10ad3f8576a860c2ebd141e",
+      "tests/test_geometry_smoke.py": "fc113333da4e40b281749b728b76df294efcd5f7f0fbf85430aa3eb72bb4a7d0",
+      "tests/test_identity_allocation.py": "af602d1ef917eda29912bb73a1e5c4ff0347f3c6186d47468724d6d798fee8b0",
+      "tests/test_nested_tensor_geometry.py": "301443740bb01fea899233439903d33a1213786531c227dec6e602d060cefdcc",
+      "tests/test_physical_material.py": "0e41822cd998283f94205e82b08efe32feef0bac86294959fcc19a53024c9c4a",
+      "tests/test_public_api.py": "09d3a917e2d9865539a163a011b40a96f5506b283fdfcfa21c572b333c42f51f",
+      "tests/test_scene_version_traversal.py": "3347b4a2bb356f177456eb70290fbd6d4427b277098b066d4865f535b2d3b84d",
+      "tests/test_world_contracts.py": "1be917a6bf952fd285de4ce2be9259662e282011adfebe268366bdc864248027",
+      "tests/test_world_import_boundary.py": "050df2cad01eb430ce690a10570449eddda229c3c002f3577db34624957cd921"
+    },
+    "pyproject": "bc3332f2c3608d38e6a2ab4693d9073e49a5b8b4dc9e91ff67e3babaec2b2533",
+    "controller": "9638bda660ae9fdf1418e39cca2f9b47b03f529eba1a12c8eda12002369f5d67"
+  },
+  "after": {
+    "core": {
+      "module_file": "/tmp/pcb-core-fixed-assignment-baseline-20261028/witwin/core/__init__.py",
+      "sources": {
+        "__init__.py": "c62f9be910ebfdb24621dcde0039b200e28751a3f47c1a0f5963a6425052face",
+        "antenna.py": "b9eb4bf1346ac28d374bc306b7828117f2f0021e9e74b516d7886208aeb1608d",
+        "dynamics.py": "c27ef9f55af8ecfda7aa474a56ca3e820b15982e1e853d88027e5a04e915523e",
+        "geometry/__init__.py": "89240d5760c0b870e28f3d16dc21a34a71e87087b5ab9c4874a56867f31899c8",
+        "geometry/base.py": "57881efe8059fd38357539c0dc1437ef7ca9bd3dc17c66e6c15e6518be078a54",
+        "geometry/mesh.py": "35040e8cf149399c827c7488a3f8cb691acaa103d13d8e5b58c7615dad29fd94",
+        "geometry/mesh_sdf.py": "6fafe5eff5827fcffd4b4c165f6f1c14777b680c2eff50d7a4500a92b2b25d27",
+        "geometry/polygon.py": "6d7a3cf2a49ab9dea938ee73067bbaa3a300f81c84286e1a402d00d051fcd831",
+        "geometry/primitives.py": "edd915d595d3ba23f1934003f28ec4239d5d2a01e5cfb46c9275c2a5c8b6fdf4",
+        "identity.py": "5b0fc9caac1478b8847c7c84f51d740a0b5b34232ade556feba8d0b9f8a5645f",
+        "material.py": "ff6aeb6a12c393bd0a9bda43c7a464e90b9dd309501936f1bae0dd526a6ed560",
+        "math.py": "2fd79ae1d4f2106d936ffb8003957de2b7ac1a7e4c83ab1a286b72409bdf0aeb",
+        "scene.py": "7157cf840857c19c050f9f7c02329cf92095db374e63d8b77bd0c99c5db424c9",
+        "structure.py": "049242712bc4405986eeb614cf5129c8fd5e39986ed69790b85b3b044e016546"
+      },
+      "source_sha256": "373afab7ff14ad516f534fbcea05829ca9f24d0cb20452e3e8c3b5336b9ad8a4"
+    },
+    "controls": {
+      "tests/conftest.py": "70011e0c7b2a7fef891fe6120103e4c8d2c58123cb9f7cb952f4e16c3fbbccbc",
+      "tests/test_channel_contract_gaps.py": "3bf8f4ba605c626f764515f17cf86640df3ef9285898c95a85c79bc07922f22f",
+      "tests/test_contracts.py": "678d1cae43031ed50ab9a8983de2f5c962ae4d502a660d9ab0efe8e5cbe995ea",
+      "tests/test_dependency_contract.py": "9aac373650f50ba22cce4611b152e6f9a086bcbfd6c095f27ce50cfb14a74d40",
+      "tests/test_distribution_contract.py": "bc7db77b0e50bd0a3ed976e6973962c25fc1faf5a9edc6905896accc97ee003e",
+      "tests/test_dynamics_contracts.py": "57173fe015167082a8147a129d2db439487755b4edb6c307cde651cc540be2df",
+      "tests/test_fixed_assignment_controls.py": "d2b7488d83249768313b12424a3017b13e8ca9b523d8adb840f3d8be7403212a",
+      "tests/test_geometry_sdf.py": "c22a883c0733753b26285c694c5fe46d578b8515b10ad3f8576a860c2ebd141e",
+      "tests/test_geometry_smoke.py": "fc113333da4e40b281749b728b76df294efcd5f7f0fbf85430aa3eb72bb4a7d0",
+      "tests/test_identity_allocation.py": "af602d1ef917eda29912bb73a1e5c4ff0347f3c6186d47468724d6d798fee8b0",
+      "tests/test_nested_tensor_geometry.py": "301443740bb01fea899233439903d33a1213786531c227dec6e602d060cefdcc",
+      "tests/test_physical_material.py": "0e41822cd998283f94205e82b08efe32feef0bac86294959fcc19a53024c9c4a",
+      "tests/test_public_api.py": "09d3a917e2d9865539a163a011b40a96f5506b283fdfcfa21c572b333c42f51f",
+      "tests/test_scene_version_traversal.py": "3347b4a2bb356f177456eb70290fbd6d4427b277098b066d4865f535b2d3b84d",
+      "tests/test_world_contracts.py": "1be917a6bf952fd285de4ce2be9259662e282011adfebe268366bdc864248027",
+      "tests/test_world_import_boundary.py": "050df2cad01eb430ce690a10570449eddda229c3c002f3577db34624957cd921"
+    },
+    "pyproject": "bc3332f2c3608d38e6a2ab4693d9073e49a5b8b4dc9e91ff67e3babaec2b2533",
+    "controller": "9638bda660ae9fdf1418e39cca2f9b47b03f529eba1a12c8eda12002369f5d67"
+  },
+  "source_unchanged": true,
+  "completed": true,
+  "result": {
+    "tests": 5,
+    "failures": 4,
+    "errors": 0,
+    "skipped": 0,
+    "junit_seconds": 0.896
+  },
+  "exit_code": 1,
+  "actual_import": "/tmp/pcb-core-fixed-assignment-baseline-20261028/witwin/core/__init__.py",
+  "cuda_initialized": false,
+  "wall_seconds": 1.5495157819241285,
+  "command": [
+    "-q",
+    "tests/test_fixed_assignment_controls.py",
+    "--junitxml=/tmp/pcb-core-fixed-assignment-qualification-20261028/baseline.xml",
+    "-o",
+    "junit_family=xunit1"
+  ],
+  "scope": "Discrete Structure priority/enabled metadata only. Physical material and Box geometry Tensor gradients preserved. No installed package/source checkout mutation."
+}
