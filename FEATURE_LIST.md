@@ -1,5 +1,7 @@
 # Core feature inventory
 
+- Release 0.4.1 includes nested-Tensor geometry ancestry and fixed assignment-control validation; the optional Maxwell integration selects `witwin-maxwell>=0.5.1,<0.6`. Its fourteen core source files preserve the qualified implementation, with only the module version constant changed. Local wheel validation does not change an installed environment.
+
 - Shared logical scenes, snapshots, material, antenna and motion contracts remain solver neutral.
 - Analytic primitives and mesh/SDF utilities retain native PyTorch tensor workflows.
 - Primitive position, size, Euler and quaternion sequences preserve nested Tensor ancestry, promoted dtype and inferred device; direct Tensor inputs keep their existing behavior.
