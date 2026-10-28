@@ -1,0 +1,174 @@
+"""CPU contracts for authored scalar tensors inside geometry sequences."""
+from __future__ import annotations
+
+import inspect
+import io
+
+import numpy as np
+import pytest
+import torch
+
+from witwin.core import Box, Ellipsoid, HollowBox, Sphere
+from witwin.core.geometry.base import _as_position, _as_rotation, _as_vec3
+
+
+def vector(theta, length=3):
+    return tuple(theta * (index + 1) + .1 * index for index in range(length))
+
+
+def container(values, kind):
+    if kind == 'object_array':
+        result = np.empty(len(values), dtype=object)
+        for index, value in enumerate(values):
+            result[index] = value
+        return result
+    return tuple(values) if kind == 'tuple' else list(values)
+
+
+@pytest.mark.parametrize('slot,length', [('position', 3), ('size', 3), ('rotation', 3), ('rotation', 4)])
+@pytest.mark.parametrize('kind', ['tuple', 'list', 'object_array'])
+def test_sequence_and_stack_have_same_value_dtype_and_gradient(slot, length, kind):
+    theta = torch.tensor(.17, dtype=torch.float64, requires_grad=True)
+    values = vector(theta, length)
+    nested = Box(**{slot: container(values, kind)})
+    stacked = Box(**{slot: torch.stack(values)})
+    actual, expected = getattr(nested, slot), getattr(stacked, slot)
+    assert actual.dtype == expected.dtype == torch.float64
+    torch.testing.assert_close(actual, expected, rtol=0, atol=0)
+    weights = theta.new_tensor([1.3 + index for index in range(length)])
+    actual_gradient = torch.autograd.grad((actual.square() * weights).sum(), theta, retain_graph=True)[0]
+    expected_gradient = torch.autograd.grad((expected.square() * weights).sum(), theta)[0]
+    torch.testing.assert_close(actual_gradient, expected_gradient, rtol=0, atol=0)
+    assert actual_gradient.abs() > .1
+
+
+@pytest.mark.parametrize('slot', ['position', 'size', 'rotation'])
+def test_nested_geometry_shares_a_live_material_leaf(slot):
+    epsilon = torch.tensor(2.1, dtype=torch.float64, requires_grad=True)
+    geometry = Box(**{slot: (epsilon * 0., epsilon * .2, epsilon * 0.)})
+    value = getattr(geometry, slot)
+    assert value.requires_grad
+    assert torch.autograd.grad(value.sum(), epsilon)[0] == .2
+
+
+@pytest.mark.parametrize('slot', ['position', 'size', 'rotation'])
+def test_python_constants_follow_tensor_dtype_and_remain_differentiable(slot):
+    theta = torch.tensor(.17, dtype=torch.float64, requires_grad=True)
+    box = Box(**{slot: (theta, 0., 1)})
+    actual = getattr(box, slot)
+    assert actual.dtype == torch.float64
+    torch.testing.assert_close(actual, torch.stack((theta, theta.new_tensor(0.), theta.new_tensor(1))))
+    assert torch.autograd.grad(actual.sum(), theta)[0] == 1
+
+
+def test_mixed_tensor_dtypes_promote_without_losing_either_leaf():
+    x = torch.tensor(.17, dtype=torch.float32, requires_grad=True)
+    y = torch.tensor(.29, dtype=torch.float64, requires_grad=True)
+    box = Box(position=(x, y, 1.))
+    assert box.position.dtype == torch.float64
+    gx, gy = torch.autograd.grad(box.position.square().sum(), (x, y))
+    torch.testing.assert_close(gx, 2*x)
+    torch.testing.assert_close(gy, 2*y)
+
+
+@pytest.mark.parametrize('slot,length', [('position', 3), ('size', 3), ('rotation', 3), ('rotation', 4)])
+def test_direct_tensor_identity_and_float64_are_unchanged(slot, length):
+    value = torch.arange(length, dtype=torch.float64, requires_grad=True)
+    box = Box(**{slot: value}, device=None)
+    assert getattr(box, slot) is value
+    assert getattr(box, slot).device.type == 'cpu'
+
+
+@pytest.mark.parametrize('helper,value', [(_as_position, (1.,2.,3.)), (_as_vec3, (1.,2.,3.)), (_as_vec3, 2.), (_as_rotation, (0.,0.,0.)), (_as_rotation, (1.,0.,0.,0.))])
+def test_python_only_defaults_remain_float32_and_cpu(helper, value):
+    prior = torch.get_default_dtype()
+    try:
+        torch.set_default_dtype(torch.float64)
+        actual = helper(value, device=None)
+        assert actual.dtype == torch.float32
+        assert actual.device.type == 'cpu'
+    finally:
+        torch.set_default_dtype(prior)
+
+
+@pytest.mark.parametrize('factory', [lambda x: Box(size=x), lambda x: Ellipsoid(radii=x), lambda x: HollowBox(outer_size=x), lambda x: HollowBox(inner_size=x)])
+def test_other_vector_dimensions_keep_tensor_graph(factory):
+    x = torch.tensor(1.4, dtype=torch.float64, requires_grad=True)
+    geometry = factory((x, x*.9, x*.8))
+    tensors = [value for value in vars(geometry).values() if isinstance(value, torch.Tensor) and value.requires_grad]
+    assert len(tensors) == 1
+    assert torch.autograd.grad(tensors[0].sum(), x)[0] == pytest.approx(2.7)
+
+
+@pytest.mark.parametrize('slot', ['position', 'size', 'rotation'])
+def test_nested_device_none_infers_authored_device_without_cuda(slot):
+    x = torch.empty((), device='meta', dtype=torch.float64, requires_grad=True)
+    box = Box(**{slot: (x, 0., 0.)}, device=None)
+    assert box.position.device.type == box.rotation.device.type == box.size.device.type == 'meta'
+    assert getattr(box, slot).dtype == torch.float64
+    assert getattr(box, slot).requires_grad
+
+
+@pytest.mark.parametrize('reverse', [False, True])
+def test_conflicting_nested_devices_reject_without_coercion(reverse):
+    values = (torch.ones((), device='cpu'), torch.empty((), device='meta'), 0.)
+    if reverse:
+        values = tuple(reversed(values))
+    with pytest.raises(ValueError, match='Geometry tensor device'):
+        Box(position=values)
+
+
+def test_explicit_device_conflict_rejects_without_copying():
+    x = torch.tensor(.2, requires_grad=True)
+    with pytest.raises(ValueError, match='Geometry tensor device'):
+        Box(position=(x, 0., 0.), device='meta')
+
+
+@pytest.mark.parametrize('slot', ['position', 'size', 'rotation'])
+def test_nested_nonscalar_tensor_rejects_instead_of_float_coercion(slot):
+    x = torch.ones(1, requires_grad=True)
+    with pytest.raises(ValueError, match='components must be scalar'):
+        Box(**{slot: (x, 0., 0.)})
+
+
+@pytest.mark.parametrize('slot,length', [('position', 3), ('size', 3), ('rotation', 3), ('rotation', 4)])
+def test_serialized_geometry_preserves_values_dtype_and_trainable_state(slot, length):
+    x = torch.tensor(.17, dtype=torch.float64, requires_grad=True)
+    geometry = Box(**{slot: vector(x, length)})
+    stream = io.BytesIO()
+    torch.save(geometry, stream)
+    stream.seek(0)
+    restored = torch.load(stream, weights_only=False, map_location='cpu')
+    expected, actual = getattr(geometry, slot), getattr(restored, slot)
+    torch.testing.assert_close(actual, expected, rtol=0, atol=0)
+    assert actual.dtype == torch.float64 and actual.requires_grad
+    # Tensor serialization preserves trainability; it does not serialize the
+    # original Python autograd graph, for stacked or nested authoring alike.
+    assert actual.is_leaf
+    torch.testing.assert_close(torch.autograd.grad(actual.square().sum(), actual)[0], 2*actual)
+
+
+@pytest.mark.parametrize('slot', ['position', 'size', 'rotation'])
+def test_box_signed_distance_gradcheck_and_stack_equivalence(slot):
+    theta = torch.tensor(.17, dtype=torch.float64, requires_grad=True)
+    point = tuple(torch.tensor(value, dtype=torch.float64) for value in (1.4, .21, -.08))
+    def objective(parameter, stacked=False):
+        if slot == 'size':
+            values = (1. + parameter, 1.2 + parameter*.3, 1.1 + parameter*.2)
+        elif slot == 'position':
+            values = (parameter*.3, parameter*.2, parameter*.1)
+        else:
+            values = (parameter*.3, parameter*.2, parameter*.1)
+        geometry = Box(**{slot: torch.stack(values) if stacked else values})
+        return geometry.signed_distance(*point)
+    assert torch.autograd.gradcheck(objective, (theta,), eps=1e-6, atol=2e-9, rtol=2e-7)
+    torch.testing.assert_close(objective(theta), objective(theta, True), rtol=0, atol=0)
+    actual = torch.autograd.grad(objective(theta), theta)[0]
+    expected = torch.autograd.grad(objective(theta, True), theta)[0]
+    torch.testing.assert_close(actual, expected, rtol=0, atol=0)
+
+
+def test_constructor_device_default_remains_none():
+    for geometry in (Box, Ellipsoid, HollowBox, Sphere):
+        assert inspect.signature(geometry).parameters['device'].default is None
+    assert not torch.cuda.is_initialized()

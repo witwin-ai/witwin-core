@@ -48,6 +48,13 @@ Polarization and antenna element positions are endpoint-local, while
 `ReceiverGrid.x_axis` and `y_axis` are world-frame grid directions. Core's
 Torch rotation and projection helpers preserve autograd.
 
+Primitive position, dimensions and rotation sequences preserve authored Tensor
+components, including nested tuples, lists and NumPy object arrays. Their
+autograd ancestry, promoted Tensor dtype and inferred device match explicitly
+stacked tensors. Python-only inputs keep their established conversion behavior;
+conflicting devices and nonscalar components reject explicitly. See
+[the feature inventory](FEATURE_LIST.md).
+
 Snapshot deformation is composed before motion: absolute deformation vertices
 replace authored local mesh vertices, or offsets are added to them; authored
 geometry transforms are applied next. `RigidMotion.rotation` then left-composes

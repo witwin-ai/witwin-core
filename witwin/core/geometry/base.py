@@ -25,10 +25,20 @@ def _devices_match(left: torch.device, right: torch.device) -> bool:
     )
 
 
-def _resolve_device(explicit, *tensor_leaves) -> torch.device | None:
-    tensors = [
-        value for value in tensor_leaves if isinstance(value, torch.Tensor)
-    ]
+def _tensor_leaves(value):
+    """Inspect authored containers without converting tensor values."""
+    if isinstance(value, torch.Tensor):
+        yield value
+    elif isinstance(value, (tuple, list)):
+        for item in value:
+            yield from _tensor_leaves(item)
+    elif isinstance(value, np.ndarray) and value.dtype == object:
+        for item in value.flat:
+            yield from _tensor_leaves(item)
+
+
+def _resolve_device(explicit, *values) -> torch.device | None:
+    tensors = (tensor for value in values for tensor in _tensor_leaves(value))
     resolved = torch.device(explicit) if explicit is not None else None
     for tensor in tensors:
         if resolved is None:
@@ -44,13 +54,50 @@ def _resolve_device(explicit, *tensor_leaves) -> torch.device | None:
     return resolved
 
 
+
+def _stack_scalar_sequence(value, *, device=None) -> torch.Tensor | None:
+    """Preserve tensor ancestry, promoted dtype, and authored device in vectors.
+
+    Python-only inputs keep their existing float32 conversion. When tensors
+    are present, Python constants use the promoted tensor dtype, as if authored
+    with ``tensor.new_tensor`` before ``torch.stack``.
+    """
+    tensors = tuple(_tensor_leaves(value))
+    if not tensors:
+        return None
+    resolved_device = _resolve_device(device, value)
+    dtype = tensors[0].dtype
+    for tensor in tensors[1:]:
+        dtype = torch.promote_types(dtype, tensor.dtype)
+    components = []
+    for item in value:
+        if isinstance(item, torch.Tensor):
+            if item.shape != ():
+                raise ValueError("Geometry sequence tensor components must be scalar.")
+            components.append(item.to(dtype=dtype))
+        elif tuple(_tensor_leaves(item)):
+            raise ValueError("Geometry sequence tensor components must be scalar.")
+        else:
+            component = torch.as_tensor(item, dtype=dtype, device=resolved_device)
+            if component.shape != ():
+                raise ValueError("Geometry sequence components must be scalar.")
+            components.append(component)
+    return torch.stack(components)
+
+
 def _as_position(value, *, device=None) -> torch.Tensor:
     if isinstance(value, torch.Tensor):
         _resolve_device(device, value)
         if value.shape != (3,):
             raise ValueError("position must have shape (3,).")
         return value
-    return torch.tensor([float(v) for v in value], dtype=torch.float32, device=device)
+    seq = list(value)
+    stacked = _stack_scalar_sequence(seq, device=device)
+    if stacked is not None:
+        if stacked.shape != (3,):
+            raise ValueError("vector sequence must contain three scalar components.")
+        return stacked
+    return torch.tensor([float(v) for v in seq], dtype=torch.float32, device=device)
 
 
 def _as_rotation(value, *, device=None) -> torch.Tensor:
@@ -63,6 +110,11 @@ def _as_rotation(value, *, device=None) -> torch.Tensor:
             return value
         raise ValueError(f"rotation tensor must be shape (4,) quaternion or (3,) Euler, got {value.shape}")
     seq = list(value)
+    stacked = _stack_scalar_sequence(seq, device=device)
+    if stacked is not None:
+        if stacked.shape not in {(3,), (4,)}:
+            raise ValueError("rotation sequence must contain three or four scalar components.")
+        return stacked
     if len(seq) == 4:
         return torch.tensor([float(v) for v in seq], dtype=torch.float32, device=device)
     if len(seq) == 3:
@@ -88,7 +140,13 @@ def _as_vec3(value, *, device=None) -> torch.Tensor:
     if isinstance(value, (int, float)):
         scalar = float(value)
         return torch.tensor([scalar, scalar, scalar], dtype=torch.float32, device=device)
-    return torch.tensor([float(v) for v in value], dtype=torch.float32, device=device)
+    seq = list(value)
+    stacked = _stack_scalar_sequence(seq, device=device)
+    if stacked is not None:
+        if stacked.shape != (3,):
+            raise ValueError("vector sequence must contain three scalar components.")
+        return stacked
+    return torch.tensor([float(v) for v in seq], dtype=torch.float32, device=device)
 
 
 def _rotation_quaternion(rotation: torch.Tensor) -> torch.Tensor:

@@ -1,0 +1,51 @@
+{
+  "schema": "core-nested-tensor-handoff/1",
+  "artifacts": {
+    "/tmp/pcb-core-nested-tensor-20261027/README.md": "b02334c35ca9d60161fe3cabbcebcb8ed0df5a7b8bc9e33669964aba7e516d33",
+    "/tmp/pcb-core-nested-tensor-20261027/installed-vs-checkout.json": "12adee594a2cbdc084fed1f0041ac1450deb49c6532fdcaa0f127e995015686f",
+    "/tmp/pcb-core-nested-tensor-20261027/installed-fix.patch": "23c0877a43d8268ff5c2899c7392162d1fea602b5c86fe273cd38e34f9fb2cc8",
+    "/tmp/pcb-core-nested-tensor-20261027/installed-fix-and-contracts.patch": "bcbfcaac5ffb97e250efd5656199bc7dfbf6e6f5206cedbd37644c1d5a2f4b77",
+    "/tmp/pcb-core-nested-tensor-20261027/checkout-reconciliation-and-fix.patch": "9fb7316c46f486b8d093f296a9a7c24cdf3464f345b61c5a08851efed4362c37",
+    "/tmp/pcb-core-nested-tensor-20261027/checkout-reconciliation-and-contracts.patch": "ad55465003ddcf0108137a543e5623b9d6f07eea61fff776a5ac4a57023de98e",
+    "/tmp/pcb-core-nested-tensor-20261027/maxwell-integration-contract.patch": "8f28331cd9d3e555e8d714c068a9e4b264f00723dbdc2e6dd7bfba984b8c858c",
+    "/tmp/pcb-core-nested-tensor-20261027/bound_control.py": "7f91094b0f002a4c44fb7b34fc6385d0f57fe73836da4a162e95dc1ec66e4b99",
+    "/tmp/pcb-core-nested-tensor-20261027/maxwell_bound_control.py": "12e2b8219f85e6499443b07a60de5b35af11fa4cfab78c769a2dc22d26f64394",
+    "/tmp/pcb-core-nested-tensor-20261027/test_nested_tensor_geometry.py": "301443740bb01fea899233439903d33a1213786531c227dec6e602d060cefdcc",
+    "/tmp/pcb-core-nested-build.py": "9768f5a8c2902582c71a124637f561fc9807ff0bab1596b76bff4b12b554c0b6",
+    "/tmp/pcb-core-nested-tensor-20261027/installed-baseline-focused.json": "4762c85e6f3ffb04299b68b2e420dc2e7f0a4ed483847f75af6249714f52bb4c",
+    "/tmp/pcb-core-nested-tensor-20261027/installed-baseline-focused.log": "60bd1632cbaf90a7a9086992251933a7f098145463e5f8a6be87616b17931509",
+    "/tmp/pcb-core-nested-tensor-20261027/installed-baseline-focused.xml": "604358bc16ba335b4bc9ae14c55c9b2c3944094ef831c75f08b9baf7ede2b6a0",
+    "/tmp/pcb-core-nested-tensor-20261027/installed-candidate-focused.json": "a91b7b894f9bc5692bb9cb1cb38451976697bb4c8c861912d7ced0df68c9f16e",
+    "/tmp/pcb-core-nested-tensor-20261027/installed-candidate-focused.log": "112af6df5a1072b75caa15b25538e27987f38a5ce82f08e8633956b0e3247df4",
+    "/tmp/pcb-core-nested-tensor-20261027/installed-candidate-focused.xml": "5efda97b12e8410116da6760c5e8da38954305e80b79c47c6c89f389c1285ac9",
+    "/tmp/pcb-core-nested-tensor-20261027/checkout-reconciled-candidate-focused.json": "99d5f0138aad8e2d3b9f73e73a4d74c2207e52a4e8359fb927f86afb384fdc12",
+    "/tmp/pcb-core-nested-tensor-20261027/checkout-reconciled-candidate-focused.log": "fc44e198ccc39b38614b2e7c2aa62f4073e25bd46e933032094a13c614342ce8",
+    "/tmp/pcb-core-nested-tensor-20261027/checkout-reconciled-candidate-focused.xml": "9378f1f7e974533db70085da6e23fb1cece174156249b8eddd00df9626869c40",
+    "/tmp/pcb-core-nested-tensor-20261027/installed-baseline-existing.json": "c5c4fcbbc461643f312916328007aa6ce86aebd38e2b80b23546d60dc8647833",
+    "/tmp/pcb-core-nested-tensor-20261027/installed-baseline-existing.log": "33172b69a7a8e337f5e7916415402b3d47be465f4b0d4d0f9e6fe1e5c547cf85",
+    "/tmp/pcb-core-nested-tensor-20261027/installed-baseline-existing.xml": "34e65deb2298df71fbb48eb694921a0782c0753c7ffe0ea864fa4069b0264120",
+    "/tmp/pcb-core-nested-tensor-20261027/installed-candidate-existing.json": "8a8c615a74acbcb36a0853536136ee7bf72a869a2d9403d065d9b54f16beb8ce",
+    "/tmp/pcb-core-nested-tensor-20261027/installed-candidate-existing.log": "5f32aaaed4e6828c129f042dd2a3866ac5fba99d9442b15431099999b9df913f",
+    "/tmp/pcb-core-nested-tensor-20261027/installed-candidate-existing.xml": "88b396e6779a45180e16591b87bbe4b803fd74635e03736ee18a20b061de26de",
+    "/tmp/pcb-core-nested-tensor-20261027/checkout-reconciled-candidate-existing.json": "18ee65192284725d88fb097a3adb2aa6eaff2bd5a97da861946567c8d1740c35",
+    "/tmp/pcb-core-nested-tensor-20261027/checkout-reconciled-candidate-existing.log": "8fbe6b108c2a1d836456540a0a7166a7d84392b689c5326c4c9638e8d2aa7667",
+    "/tmp/pcb-core-nested-tensor-20261027/checkout-reconciled-candidate-existing.xml": "66e2bfb3f4d8b356d8728e86600685399c3f2c30a4c01dd7e0ca83bcd19cde38",
+    "/tmp/pcb-core-nested-tensor-20261027/maxwell-integration.json": "c4ee901e15e18642dfb0f8a5ece4e8ab770a7e93eb6e077a092efb7320c39d56",
+    "/tmp/pcb-core-nested-tensor-20261027/maxwell-integration.log": "d761a06364b4acd0706f17111682e63ff4c17e2b98806aa686a75f4142d623f3",
+    "/tmp/pcb-core-nested-tensor-20261027/maxwell-integration.xml": "8b1b11030d09108d118f10ea4e862f0ad4c0079b50cce29b9c5e8b906a030f3c"
+  },
+  "owned_core_installed_paths": [
+    "witwin/core/geometry/base.py",
+    "tests/test_nested_tensor_geometry.py"
+  ],
+  "owned_core_checkout_alternative_paths": [
+    "witwin/core/geometry/base.py",
+    "witwin/core/geometry/primitives.py",
+    "witwin/core/geometry/mesh.py",
+    "tests/test_nested_tensor_geometry.py"
+  ],
+  "owned_maxwell_paths": [
+    "tests/core/scene/test_nested_geometry_core_integration.py"
+  ],
+  "scope": "Private CPU-only candidate; no installed/repository production edits, no mapped guard change, no GPU, no commit."
+}

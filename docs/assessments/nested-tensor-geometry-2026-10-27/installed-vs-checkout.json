@@ -1,0 +1,93 @@
+{
+  "checkout_commit": "78aad439865448b9f213e78cae4baa807b57d3be",
+  "checkout_status": "",
+  "installed_version": "0.4.0",
+  "checkout_version": "0.3.0",
+  "differences": [
+    {
+      "path": "__init__.py",
+      "checkout_sha256": "37baac6bc9e04cfd5e2f00d8259415ca9d8aa783b11d13d3cac00522d2ae52d8",
+      "installed_sha256": "c62f9be910ebfdb24621dcde0039b200e28751a3f47c1a0f5963a6425052face"
+    },
+    {
+      "path": "antenna.py",
+      "checkout_sha256": null,
+      "installed_sha256": "b9eb4bf1346ac28d374bc306b7828117f2f0021e9e74b516d7886208aeb1608d"
+    },
+    {
+      "path": "dynamics.py",
+      "checkout_sha256": null,
+      "installed_sha256": "c27ef9f55af8ecfda7aa474a56ca3e820b15982e1e853d88027e5a04e915523e"
+    },
+    {
+      "path": "geometry/base.py",
+      "checkout_sha256": "874a954e544f5dc83c5f525f4fae540f2a83bb3668c7347bac60a4fe59116ed7",
+      "installed_sha256": "7ba13b0f277061f52d742b574852657cee95ed4288898ab98f434db671f036f6"
+    },
+    {
+      "path": "geometry/cuda/__init__.py",
+      "checkout_sha256": "3238b5e9498aaaaba45cb3b9d0a0cbe3bd0f09980bcdf8f50f813ef7bbe66d6c",
+      "installed_sha256": null
+    },
+    {
+      "path": "geometry/cuda/backend.py",
+      "checkout_sha256": "9a97d1a837355f2383097ef48d9cb7ed9eb82edaa31df651217f3e49bf1b2fec",
+      "installed_sha256": null
+    },
+    {
+      "path": "geometry/cuda/build.py",
+      "checkout_sha256": "998fe3b58121c3ad5228519cbaf51b4ab88253f3baa2b10da6c10e35a2e87cc3",
+      "installed_sha256": null
+    },
+    {
+      "path": "geometry/cuda/extension.cpp",
+      "checkout_sha256": "d5698d4149498559166aab7bf318f43d35f1c9a9586e3a2f6f73b979556e441f",
+      "installed_sha256": null
+    },
+    {
+      "path": "geometry/cuda/mesh_sdf_kernels.cu",
+      "checkout_sha256": "3486431a4189492d421a65e4b82f911d030932c5d87298074672dc0e0d53b5f1",
+      "installed_sha256": null
+    },
+    {
+      "path": "geometry/mesh.py",
+      "checkout_sha256": "3db50faa52664081252fa85e2279cc3218d4ea424c5f8ac868f11f55d7aa463e",
+      "installed_sha256": "35040e8cf149399c827c7488a3f8cb691acaa103d13d8e5b58c7615dad29fd94"
+    },
+    {
+      "path": "geometry/mesh_sdf.py",
+      "checkout_sha256": "e87eb1427da6833130d7aa5df1eabc6ece3717299ca3ec5d1c21f888e82831b8",
+      "installed_sha256": "6fafe5eff5827fcffd4b4c165f6f1c14777b680c2eff50d7a4500a92b2b25d27"
+    },
+    {
+      "path": "geometry/primitives.py",
+      "checkout_sha256": "f5437f98ad6c2107160a35902ad318afafdb3d10d59eb130980912eb04df7f10",
+      "installed_sha256": "edd915d595d3ba23f1934003f28ec4239d5d2a01e5cfb46c9275c2a5c8b6fdf4"
+    },
+    {
+      "path": "identity.py",
+      "checkout_sha256": null,
+      "installed_sha256": "5b0fc9caac1478b8847c7c84f51d740a0b5b34232ade556feba8d0b9f8a5645f"
+    },
+    {
+      "path": "material.py",
+      "checkout_sha256": "b6cc3dba48ede8c40f8683d09227036a143dd7de1ee91e8074be89f10cba91ca",
+      "installed_sha256": "ff6aeb6a12c393bd0a9bda43c7a464e90b9dd309501936f1bae0dd526a6ed560"
+    },
+    {
+      "path": "math.py",
+      "checkout_sha256": "b2f71594f3fa556605b80cd0385c01156128a2638831ae8b638111c3df8699cb",
+      "installed_sha256": "2fd79ae1d4f2106d936ffb8003957de2b7ac1a7e4c83ab1a286b72409bdf0aeb"
+    },
+    {
+      "path": "scene.py",
+      "checkout_sha256": null,
+      "installed_sha256": "7157cf840857c19c050f9f7c02329cf92095db374e63d8b77bd0c99c5db424c9"
+    },
+    {
+      "path": "structure.py",
+      "checkout_sha256": null,
+      "installed_sha256": "049242712bc4405986eeb614cf5129c8fd5e39986ed69790b85b3b044e016546"
+    }
+  ]
+}

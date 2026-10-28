@@ -1,0 +1,58 @@
+[
+  {
+    "path": "witwin/core/__init__.py",
+    "same": true
+  },
+  {
+    "path": "witwin/core/scene.py",
+    "same": true
+  },
+  {
+    "path": "witwin/core/math.py",
+    "same": true
+  },
+  {
+    "path": "witwin/core/dynamics.py",
+    "same": true
+  },
+  {
+    "path": "witwin/core/material.py",
+    "same": true
+  },
+  {
+    "path": "witwin/core/identity.py",
+    "same": true
+  },
+  {
+    "path": "witwin/core/structure.py",
+    "same": true
+  },
+  {
+    "path": "witwin/core/antenna.py",
+    "same": true
+  },
+  {
+    "path": "witwin/core/geometry/__init__.py",
+    "same": true
+  },
+  {
+    "path": "witwin/core/geometry/primitives.py",
+    "same": true
+  },
+  {
+    "path": "witwin/core/geometry/polygon.py",
+    "same": true
+  },
+  {
+    "path": "witwin/core/geometry/mesh.py",
+    "same": true
+  },
+  {
+    "path": "witwin/core/geometry/base.py",
+    "same": true
+  },
+  {
+    "path": "witwin/core/geometry/mesh_sdf.py",
+    "same": true
+  }
+]

@@ -1,0 +1,702 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="39" skipped="0" tests="49" time="1.963" timestamp="2026-10-27T21:47:15.411058-07:00" hostname="xyz-lab"><testcase classname="tests.test_nested_tensor_geometry" name="test_sequence_and_stack_have_same_value_dtype_and_gradient[tuple-position-3]" time="0.005"><failure message="assert torch.float32 == torch.float64&#10; +  where torch.float32 = tensor([0.1700, 0.4400, 0.7100]).dtype&#10; +  and   torch.float64 = tensor([0.1700, 0.4400, 0.7100], dtype=torch.float64, grad_fn=&lt;StackBackward0&gt;).dtype">slot = 'position', length = 3, kind = 'tuple'
+
+    @pytest.mark.parametrize('slot,length', [('position', 3), ('size', 3), ('rotation', 3), ('rotation', 4)])
+    @pytest.mark.parametrize('kind', ['tuple', 'list', 'object_array'])
+    def test_sequence_and_stack_have_same_value_dtype_and_gradient(slot, length, kind):
+        theta = torch.tensor(.17, dtype=torch.float64, requires_grad=True)
+        values = vector(theta, length)
+        nested = Box(**{slot: container(values, kind)})
+        stacked = Box(**{slot: torch.stack(values)})
+        actual, expected = getattr(nested, slot), getattr(stacked, slot)
+&gt;       assert actual.dtype == expected.dtype == torch.float64
+E       assert torch.float32 == torch.float64
+E        +  where torch.float32 = tensor([0.1700, 0.4400, 0.7100]).dtype
+E        +  and   torch.float64 = tensor([0.1700, 0.4400, 0.7100], dtype=torch.float64, grad_fn=&lt;StackBackward0&gt;).dtype
+
+tests/test_nested_tensor_geometry.py:36: AssertionError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_sequence_and_stack_have_same_value_dtype_and_gradient[tuple-size-3]" time="0.002"><failure message="assert torch.float32 == torch.float64&#10; +  where torch.float32 = tensor([0.1700, 0.4400, 0.7100]).dtype&#10; +  and   torch.float64 = tensor([0.1700, 0.4400, 0.7100], dtype=torch.float64, grad_fn=&lt;StackBackward0&gt;).dtype">slot = 'size', length = 3, kind = 'tuple'
+
+    @pytest.mark.parametrize('slot,length', [('position', 3), ('size', 3), ('rotation', 3), ('rotation', 4)])
+    @pytest.mark.parametrize('kind', ['tuple', 'list', 'object_array'])
+    def test_sequence_and_stack_have_same_value_dtype_and_gradient(slot, length, kind):
+        theta = torch.tensor(.17, dtype=torch.float64, requires_grad=True)
+        values = vector(theta, length)
+        nested = Box(**{slot: container(values, kind)})
+        stacked = Box(**{slot: torch.stack(values)})
+        actual, expected = getattr(nested, slot), getattr(stacked, slot)
+&gt;       assert actual.dtype == expected.dtype == torch.float64
+E       assert torch.float32 == torch.float64
+E        +  where torch.float32 = tensor([0.1700, 0.4400, 0.7100]).dtype
+E        +  and   torch.float64 = tensor([0.1700, 0.4400, 0.7100], dtype=torch.float64, grad_fn=&lt;StackBackward0&gt;).dtype
+
+tests/test_nested_tensor_geometry.py:36: AssertionError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_sequence_and_stack_have_same_value_dtype_and_gradient[tuple-rotation-3]" time="0.002"><failure message="assert torch.float32 == torch.float64&#10; +  where torch.float32 = tensor([0.9182, 0.0021, 0.2327, 0.3206]).dtype&#10; +  and   torch.float64 = tensor([0.1700, 0.4400, 0.7100], dtype=torch.float64, grad_fn=&lt;StackBackward0&gt;).dtype">slot = 'rotation', length = 3, kind = 'tuple'
+
+    @pytest.mark.parametrize('slot,length', [('position', 3), ('size', 3), ('rotation', 3), ('rotation', 4)])
+    @pytest.mark.parametrize('kind', ['tuple', 'list', 'object_array'])
+    def test_sequence_and_stack_have_same_value_dtype_and_gradient(slot, length, kind):
+        theta = torch.tensor(.17, dtype=torch.float64, requires_grad=True)
+        values = vector(theta, length)
+        nested = Box(**{slot: container(values, kind)})
+        stacked = Box(**{slot: torch.stack(values)})
+        actual, expected = getattr(nested, slot), getattr(stacked, slot)
+&gt;       assert actual.dtype == expected.dtype == torch.float64
+E       assert torch.float32 == torch.float64
+E        +  where torch.float32 = tensor([0.9182, 0.0021, 0.2327, 0.3206]).dtype
+E        +  and   torch.float64 = tensor([0.1700, 0.4400, 0.7100], dtype=torch.float64, grad_fn=&lt;StackBackward0&gt;).dtype
+
+tests/test_nested_tensor_geometry.py:36: AssertionError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_sequence_and_stack_have_same_value_dtype_and_gradient[tuple-rotation-4]" time="0.001"><failure message="assert torch.float32 == torch.float64&#10; +  where torch.float32 = tensor([0.1700, 0.4400, 0.7100, 0.9800]).dtype&#10; +  and   torch.float64 = tensor([0.1700, 0.4400, 0.7100, 0.9800], dtype=torch.float64,\n       grad_fn=&lt;StackBackward0&gt;).dtype">slot = 'rotation', length = 4, kind = 'tuple'
+
+    @pytest.mark.parametrize('slot,length', [('position', 3), ('size', 3), ('rotation', 3), ('rotation', 4)])
+    @pytest.mark.parametrize('kind', ['tuple', 'list', 'object_array'])
+    def test_sequence_and_stack_have_same_value_dtype_and_gradient(slot, length, kind):
+        theta = torch.tensor(.17, dtype=torch.float64, requires_grad=True)
+        values = vector(theta, length)
+        nested = Box(**{slot: container(values, kind)})
+        stacked = Box(**{slot: torch.stack(values)})
+        actual, expected = getattr(nested, slot), getattr(stacked, slot)
+&gt;       assert actual.dtype == expected.dtype == torch.float64
+E       assert torch.float32 == torch.float64
+E        +  where torch.float32 = tensor([0.1700, 0.4400, 0.7100, 0.9800]).dtype
+E        +  and   torch.float64 = tensor([0.1700, 0.4400, 0.7100, 0.9800], dtype=torch.float64,\n       grad_fn=&lt;StackBackward0&gt;).dtype
+
+tests/test_nested_tensor_geometry.py:36: AssertionError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_sequence_and_stack_have_same_value_dtype_and_gradient[list-position-3]" time="0.001"><failure message="assert torch.float32 == torch.float64&#10; +  where torch.float32 = tensor([0.1700, 0.4400, 0.7100]).dtype&#10; +  and   torch.float64 = tensor([0.1700, 0.4400, 0.7100], dtype=torch.float64, grad_fn=&lt;StackBackward0&gt;).dtype">slot = 'position', length = 3, kind = 'list'
+
+    @pytest.mark.parametrize('slot,length', [('position', 3), ('size', 3), ('rotation', 3), ('rotation', 4)])
+    @pytest.mark.parametrize('kind', ['tuple', 'list', 'object_array'])
+    def test_sequence_and_stack_have_same_value_dtype_and_gradient(slot, length, kind):
+        theta = torch.tensor(.17, dtype=torch.float64, requires_grad=True)
+        values = vector(theta, length)
+        nested = Box(**{slot: container(values, kind)})
+        stacked = Box(**{slot: torch.stack(values)})
+        actual, expected = getattr(nested, slot), getattr(stacked, slot)
+&gt;       assert actual.dtype == expected.dtype == torch.float64
+E       assert torch.float32 == torch.float64
+E        +  where torch.float32 = tensor([0.1700, 0.4400, 0.7100]).dtype
+E        +  and   torch.float64 = tensor([0.1700, 0.4400, 0.7100], dtype=torch.float64, grad_fn=&lt;StackBackward0&gt;).dtype
+
+tests/test_nested_tensor_geometry.py:36: AssertionError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_sequence_and_stack_have_same_value_dtype_and_gradient[list-size-3]" time="0.001"><failure message="assert torch.float32 == torch.float64&#10; +  where torch.float32 = tensor([0.1700, 0.4400, 0.7100]).dtype&#10; +  and   torch.float64 = tensor([0.1700, 0.4400, 0.7100], dtype=torch.float64, grad_fn=&lt;StackBackward0&gt;).dtype">slot = 'size', length = 3, kind = 'list'
+
+    @pytest.mark.parametrize('slot,length', [('position', 3), ('size', 3), ('rotation', 3), ('rotation', 4)])
+    @pytest.mark.parametrize('kind', ['tuple', 'list', 'object_array'])
+    def test_sequence_and_stack_have_same_value_dtype_and_gradient(slot, length, kind):
+        theta = torch.tensor(.17, dtype=torch.float64, requires_grad=True)
+        values = vector(theta, length)
+        nested = Box(**{slot: container(values, kind)})
+        stacked = Box(**{slot: torch.stack(values)})
+        actual, expected = getattr(nested, slot), getattr(stacked, slot)
+&gt;       assert actual.dtype == expected.dtype == torch.float64
+E       assert torch.float32 == torch.float64
+E        +  where torch.float32 = tensor([0.1700, 0.4400, 0.7100]).dtype
+E        +  and   torch.float64 = tensor([0.1700, 0.4400, 0.7100], dtype=torch.float64, grad_fn=&lt;StackBackward0&gt;).dtype
+
+tests/test_nested_tensor_geometry.py:36: AssertionError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_sequence_and_stack_have_same_value_dtype_and_gradient[list-rotation-3]" time="0.002"><failure message="assert torch.float32 == torch.float64&#10; +  where torch.float32 = tensor([0.9182, 0.0021, 0.2327, 0.3206]).dtype&#10; +  and   torch.float64 = tensor([0.1700, 0.4400, 0.7100], dtype=torch.float64, grad_fn=&lt;StackBackward0&gt;).dtype">slot = 'rotation', length = 3, kind = 'list'
+
+    @pytest.mark.parametrize('slot,length', [('position', 3), ('size', 3), ('rotation', 3), ('rotation', 4)])
+    @pytest.mark.parametrize('kind', ['tuple', 'list', 'object_array'])
+    def test_sequence_and_stack_have_same_value_dtype_and_gradient(slot, length, kind):
+        theta = torch.tensor(.17, dtype=torch.float64, requires_grad=True)
+        values = vector(theta, length)
+        nested = Box(**{slot: container(values, kind)})
+        stacked = Box(**{slot: torch.stack(values)})
+        actual, expected = getattr(nested, slot), getattr(stacked, slot)
+&gt;       assert actual.dtype == expected.dtype == torch.float64
+E       assert torch.float32 == torch.float64
+E        +  where torch.float32 = tensor([0.9182, 0.0021, 0.2327, 0.3206]).dtype
+E        +  and   torch.float64 = tensor([0.1700, 0.4400, 0.7100], dtype=torch.float64, grad_fn=&lt;StackBackward0&gt;).dtype
+
+tests/test_nested_tensor_geometry.py:36: AssertionError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_sequence_and_stack_have_same_value_dtype_and_gradient[list-rotation-4]" time="0.001"><failure message="assert torch.float32 == torch.float64&#10; +  where torch.float32 = tensor([0.1700, 0.4400, 0.7100, 0.9800]).dtype&#10; +  and   torch.float64 = tensor([0.1700, 0.4400, 0.7100, 0.9800], dtype=torch.float64,\n       grad_fn=&lt;StackBackward0&gt;).dtype">slot = 'rotation', length = 4, kind = 'list'
+
+    @pytest.mark.parametrize('slot,length', [('position', 3), ('size', 3), ('rotation', 3), ('rotation', 4)])
+    @pytest.mark.parametrize('kind', ['tuple', 'list', 'object_array'])
+    def test_sequence_and_stack_have_same_value_dtype_and_gradient(slot, length, kind):
+        theta = torch.tensor(.17, dtype=torch.float64, requires_grad=True)
+        values = vector(theta, length)
+        nested = Box(**{slot: container(values, kind)})
+        stacked = Box(**{slot: torch.stack(values)})
+        actual, expected = getattr(nested, slot), getattr(stacked, slot)
+&gt;       assert actual.dtype == expected.dtype == torch.float64
+E       assert torch.float32 == torch.float64
+E        +  where torch.float32 = tensor([0.1700, 0.4400, 0.7100, 0.9800]).dtype
+E        +  and   torch.float64 = tensor([0.1700, 0.4400, 0.7100, 0.9800], dtype=torch.float64,\n       grad_fn=&lt;StackBackward0&gt;).dtype
+
+tests/test_nested_tensor_geometry.py:36: AssertionError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_sequence_and_stack_have_same_value_dtype_and_gradient[object_array-position-3]" time="0.001"><failure message="assert torch.float32 == torch.float64&#10; +  where torch.float32 = tensor([0.1700, 0.4400, 0.7100]).dtype&#10; +  and   torch.float64 = tensor([0.1700, 0.4400, 0.7100], dtype=torch.float64, grad_fn=&lt;StackBackward0&gt;).dtype">slot = 'position', length = 3, kind = 'object_array'
+
+    @pytest.mark.parametrize('slot,length', [('position', 3), ('size', 3), ('rotation', 3), ('rotation', 4)])
+    @pytest.mark.parametrize('kind', ['tuple', 'list', 'object_array'])
+    def test_sequence_and_stack_have_same_value_dtype_and_gradient(slot, length, kind):
+        theta = torch.tensor(.17, dtype=torch.float64, requires_grad=True)
+        values = vector(theta, length)
+        nested = Box(**{slot: container(values, kind)})
+        stacked = Box(**{slot: torch.stack(values)})
+        actual, expected = getattr(nested, slot), getattr(stacked, slot)
+&gt;       assert actual.dtype == expected.dtype == torch.float64
+E       assert torch.float32 == torch.float64
+E        +  where torch.float32 = tensor([0.1700, 0.4400, 0.7100]).dtype
+E        +  and   torch.float64 = tensor([0.1700, 0.4400, 0.7100], dtype=torch.float64, grad_fn=&lt;StackBackward0&gt;).dtype
+
+tests/test_nested_tensor_geometry.py:36: AssertionError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_sequence_and_stack_have_same_value_dtype_and_gradient[object_array-size-3]" time="0.001"><failure message="assert torch.float32 == torch.float64&#10; +  where torch.float32 = tensor([0.1700, 0.4400, 0.7100]).dtype&#10; +  and   torch.float64 = tensor([0.1700, 0.4400, 0.7100], dtype=torch.float64, grad_fn=&lt;StackBackward0&gt;).dtype">slot = 'size', length = 3, kind = 'object_array'
+
+    @pytest.mark.parametrize('slot,length', [('position', 3), ('size', 3), ('rotation', 3), ('rotation', 4)])
+    @pytest.mark.parametrize('kind', ['tuple', 'list', 'object_array'])
+    def test_sequence_and_stack_have_same_value_dtype_and_gradient(slot, length, kind):
+        theta = torch.tensor(.17, dtype=torch.float64, requires_grad=True)
+        values = vector(theta, length)
+        nested = Box(**{slot: container(values, kind)})
+        stacked = Box(**{slot: torch.stack(values)})
+        actual, expected = getattr(nested, slot), getattr(stacked, slot)
+&gt;       assert actual.dtype == expected.dtype == torch.float64
+E       assert torch.float32 == torch.float64
+E        +  where torch.float32 = tensor([0.1700, 0.4400, 0.7100]).dtype
+E        +  and   torch.float64 = tensor([0.1700, 0.4400, 0.7100], dtype=torch.float64, grad_fn=&lt;StackBackward0&gt;).dtype
+
+tests/test_nested_tensor_geometry.py:36: AssertionError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_sequence_and_stack_have_same_value_dtype_and_gradient[object_array-rotation-3]" time="0.001"><failure message="assert torch.float32 == torch.float64&#10; +  where torch.float32 = tensor([0.9182, 0.0021, 0.2327, 0.3206]).dtype&#10; +  and   torch.float64 = tensor([0.1700, 0.4400, 0.7100], dtype=torch.float64, grad_fn=&lt;StackBackward0&gt;).dtype">slot = 'rotation', length = 3, kind = 'object_array'
+
+    @pytest.mark.parametrize('slot,length', [('position', 3), ('size', 3), ('rotation', 3), ('rotation', 4)])
+    @pytest.mark.parametrize('kind', ['tuple', 'list', 'object_array'])
+    def test_sequence_and_stack_have_same_value_dtype_and_gradient(slot, length, kind):
+        theta = torch.tensor(.17, dtype=torch.float64, requires_grad=True)
+        values = vector(theta, length)
+        nested = Box(**{slot: container(values, kind)})
+        stacked = Box(**{slot: torch.stack(values)})
+        actual, expected = getattr(nested, slot), getattr(stacked, slot)
+&gt;       assert actual.dtype == expected.dtype == torch.float64
+E       assert torch.float32 == torch.float64
+E        +  where torch.float32 = tensor([0.9182, 0.0021, 0.2327, 0.3206]).dtype
+E        +  and   torch.float64 = tensor([0.1700, 0.4400, 0.7100], dtype=torch.float64, grad_fn=&lt;StackBackward0&gt;).dtype
+
+tests/test_nested_tensor_geometry.py:36: AssertionError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_sequence_and_stack_have_same_value_dtype_and_gradient[object_array-rotation-4]" time="0.001"><failure message="assert torch.float32 == torch.float64&#10; +  where torch.float32 = tensor([0.1700, 0.4400, 0.7100, 0.9800]).dtype&#10; +  and   torch.float64 = tensor([0.1700, 0.4400, 0.7100, 0.9800], dtype=torch.float64,\n       grad_fn=&lt;StackBackward0&gt;).dtype">slot = 'rotation', length = 4, kind = 'object_array'
+
+    @pytest.mark.parametrize('slot,length', [('position', 3), ('size', 3), ('rotation', 3), ('rotation', 4)])
+    @pytest.mark.parametrize('kind', ['tuple', 'list', 'object_array'])
+    def test_sequence_and_stack_have_same_value_dtype_and_gradient(slot, length, kind):
+        theta = torch.tensor(.17, dtype=torch.float64, requires_grad=True)
+        values = vector(theta, length)
+        nested = Box(**{slot: container(values, kind)})
+        stacked = Box(**{slot: torch.stack(values)})
+        actual, expected = getattr(nested, slot), getattr(stacked, slot)
+&gt;       assert actual.dtype == expected.dtype == torch.float64
+E       assert torch.float32 == torch.float64
+E        +  where torch.float32 = tensor([0.1700, 0.4400, 0.7100, 0.9800]).dtype
+E        +  and   torch.float64 = tensor([0.1700, 0.4400, 0.7100, 0.9800], dtype=torch.float64,\n       grad_fn=&lt;StackBackward0&gt;).dtype
+
+tests/test_nested_tensor_geometry.py:36: AssertionError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_nested_geometry_shares_a_live_material_leaf[position]" time="0.001"><failure message="assert False&#10; +  where False = tensor([0.0000, 0.4200, 0.0000]).requires_grad">slot = 'position'
+
+    @pytest.mark.parametrize('slot', ['position', 'size', 'rotation'])
+    def test_nested_geometry_shares_a_live_material_leaf(slot):
+        epsilon = torch.tensor(2.1, dtype=torch.float64, requires_grad=True)
+        geometry = Box(**{slot: (epsilon * 0., epsilon * .2, epsilon * 0.)})
+        value = getattr(geometry, slot)
+&gt;       assert value.requires_grad
+E       assert False
+E        +  where False = tensor([0.0000, 0.4200, 0.0000]).requires_grad
+
+tests/test_nested_tensor_geometry.py:50: AssertionError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_nested_geometry_shares_a_live_material_leaf[size]" time="0.001"><failure message="assert False&#10; +  where False = tensor([0.0000, 0.4200, 0.0000]).requires_grad">slot = 'size'
+
+    @pytest.mark.parametrize('slot', ['position', 'size', 'rotation'])
+    def test_nested_geometry_shares_a_live_material_leaf(slot):
+        epsilon = torch.tensor(2.1, dtype=torch.float64, requires_grad=True)
+        geometry = Box(**{slot: (epsilon * 0., epsilon * .2, epsilon * 0.)})
+        value = getattr(geometry, slot)
+&gt;       assert value.requires_grad
+E       assert False
+E        +  where False = tensor([0.0000, 0.4200, 0.0000]).requires_grad
+
+tests/test_nested_tensor_geometry.py:50: AssertionError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_nested_geometry_shares_a_live_material_leaf[rotation]" time="0.001"><failure message="assert False&#10; +  where False = tensor([0.9780, 0.0000, 0.2085, 0.0000]).requires_grad">slot = 'rotation'
+
+    @pytest.mark.parametrize('slot', ['position', 'size', 'rotation'])
+    def test_nested_geometry_shares_a_live_material_leaf(slot):
+        epsilon = torch.tensor(2.1, dtype=torch.float64, requires_grad=True)
+        geometry = Box(**{slot: (epsilon * 0., epsilon * .2, epsilon * 0.)})
+        value = getattr(geometry, slot)
+&gt;       assert value.requires_grad
+E       assert False
+E        +  where False = tensor([0.9780, 0.0000, 0.2085, 0.0000]).requires_grad
+
+tests/test_nested_tensor_geometry.py:50: AssertionError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_python_constants_follow_tensor_dtype_and_remain_differentiable[position]" time="0.001"><failure message="assert torch.float32 == torch.float64&#10; +  where torch.float32 = tensor([0.1700, 0.0000, 1.0000]).dtype&#10; +  and   torch.float64 = torch.float64">slot = 'position'
+
+    @pytest.mark.parametrize('slot', ['position', 'size', 'rotation'])
+    def test_python_constants_follow_tensor_dtype_and_remain_differentiable(slot):
+        theta = torch.tensor(.17, dtype=torch.float64, requires_grad=True)
+        box = Box(**{slot: (theta, 0., 1)})
+        actual = getattr(box, slot)
+&gt;       assert actual.dtype == torch.float64
+E       assert torch.float32 == torch.float64
+E        +  where torch.float32 = tensor([0.1700, 0.0000, 1.0000]).dtype
+E        +  and   torch.float64 = torch.float64
+
+tests/test_nested_tensor_geometry.py:59: AssertionError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_python_constants_follow_tensor_dtype_and_remain_differentiable[size]" time="0.001"><failure message="assert torch.float32 == torch.float64&#10; +  where torch.float32 = tensor([0.1700, 0.0000, 1.0000]).dtype&#10; +  and   torch.float64 = torch.float64">slot = 'size'
+
+    @pytest.mark.parametrize('slot', ['position', 'size', 'rotation'])
+    def test_python_constants_follow_tensor_dtype_and_remain_differentiable(slot):
+        theta = torch.tensor(.17, dtype=torch.float64, requires_grad=True)
+        box = Box(**{slot: (theta, 0., 1)})
+        actual = getattr(box, slot)
+&gt;       assert actual.dtype == torch.float64
+E       assert torch.float32 == torch.float64
+E        +  where torch.float32 = tensor([0.1700, 0.0000, 1.0000]).dtype
+E        +  and   torch.float64 = torch.float64
+
+tests/test_nested_tensor_geometry.py:59: AssertionError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_python_constants_follow_tensor_dtype_and_remain_differentiable[rotation]" time="0.001"><failure message="assert torch.float32 == torch.float64&#10; +  where torch.float32 = tensor([0.8744, 0.0745, 0.0407, 0.4777]).dtype&#10; +  and   torch.float64 = torch.float64">slot = 'rotation'
+
+    @pytest.mark.parametrize('slot', ['position', 'size', 'rotation'])
+    def test_python_constants_follow_tensor_dtype_and_remain_differentiable(slot):
+        theta = torch.tensor(.17, dtype=torch.float64, requires_grad=True)
+        box = Box(**{slot: (theta, 0., 1)})
+        actual = getattr(box, slot)
+&gt;       assert actual.dtype == torch.float64
+E       assert torch.float32 == torch.float64
+E        +  where torch.float32 = tensor([0.8744, 0.0745, 0.0407, 0.4777]).dtype
+E        +  and   torch.float64 = torch.float64
+
+tests/test_nested_tensor_geometry.py:59: AssertionError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_mixed_tensor_dtypes_promote_without_losing_either_leaf" time="0.001"><failure message="assert torch.float32 == torch.float64&#10; +  where torch.float32 = tensor([0.1700, 0.2900, 1.0000]).dtype&#10; +    where tensor([0.1700, 0.2900, 1.0000]) = Box(position=tensor([0.1700, 0.2900, 1.0000]), rotation=tensor([1., 0., 0., 0.]), size=tensor([1., 1., 1.])).position&#10; +  and   torch.float64 = torch.float64">def test_mixed_tensor_dtypes_promote_without_losing_either_leaf():
+        x = torch.tensor(.17, dtype=torch.float32, requires_grad=True)
+        y = torch.tensor(.29, dtype=torch.float64, requires_grad=True)
+        box = Box(position=(x, y, 1.))
+&gt;       assert box.position.dtype == torch.float64
+E       assert torch.float32 == torch.float64
+E        +  where torch.float32 = tensor([0.1700, 0.2900, 1.0000]).dtype
+E        +    where tensor([0.1700, 0.2900, 1.0000]) = Box(position=tensor([0.1700, 0.2900, 1.0000]), rotation=tensor([1., 0., 0., 0.]), size=tensor([1., 1., 1.])).position
+E        +  and   torch.float64 = torch.float64
+
+tests/test_nested_tensor_geometry.py:68: AssertionError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_direct_tensor_identity_and_float64_are_unchanged[position-3]" time="0.001" /><testcase classname="tests.test_nested_tensor_geometry" name="test_direct_tensor_identity_and_float64_are_unchanged[size-3]" time="0.001" /><testcase classname="tests.test_nested_tensor_geometry" name="test_direct_tensor_identity_and_float64_are_unchanged[rotation-3]" time="0.001" /><testcase classname="tests.test_nested_tensor_geometry" name="test_direct_tensor_identity_and_float64_are_unchanged[rotation-4]" time="0.001" /><testcase classname="tests.test_nested_tensor_geometry" name="test_python_only_defaults_remain_float32_and_cpu[_as_position-value0]" time="0.001" /><testcase classname="tests.test_nested_tensor_geometry" name="test_python_only_defaults_remain_float32_and_cpu[_as_vec3-value1]" time="0.001" /><testcase classname="tests.test_nested_tensor_geometry" name="test_python_only_defaults_remain_float32_and_cpu[_as_vec3-2.0]" time="0.001" /><testcase classname="tests.test_nested_tensor_geometry" name="test_python_only_defaults_remain_float32_and_cpu[_as_rotation-value3]" time="0.001" /><testcase classname="tests.test_nested_tensor_geometry" name="test_python_only_defaults_remain_float32_and_cpu[_as_rotation-value4]" time="0.001" /><testcase classname="tests.test_nested_tensor_geometry" name="test_other_vector_dimensions_keep_tensor_graph[&lt;lambda&gt;0]" time="0.001"><failure message="assert 0 == 1&#10; +  where 0 = len([])">factory = &lt;function &lt;lambda&gt; at 0x750487b61c60&gt;
+
+    @pytest.mark.parametrize('factory', [lambda x: Box(size=x), lambda x: Ellipsoid(radii=x), lambda x: HollowBox(outer_size=x), lambda x: HollowBox(inner_size=x)])
+    def test_other_vector_dimensions_keep_tensor_graph(factory):
+        x = torch.tensor(1.4, dtype=torch.float64, requires_grad=True)
+        geometry = factory((x, x*.9, x*.8))
+        tensors = [value for value in vars(geometry).values() if isinstance(value, torch.Tensor) and value.requires_grad]
+&gt;       assert len(tensors) == 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+tests/test_nested_tensor_geometry.py:99: AssertionError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_other_vector_dimensions_keep_tensor_graph[&lt;lambda&gt;1]" time="0.001"><failure message="assert 0 == 1&#10; +  where 0 = len([])">factory = &lt;function &lt;lambda&gt; at 0x750487b61d00&gt;
+
+    @pytest.mark.parametrize('factory', [lambda x: Box(size=x), lambda x: Ellipsoid(radii=x), lambda x: HollowBox(outer_size=x), lambda x: HollowBox(inner_size=x)])
+    def test_other_vector_dimensions_keep_tensor_graph(factory):
+        x = torch.tensor(1.4, dtype=torch.float64, requires_grad=True)
+        geometry = factory((x, x*.9, x*.8))
+        tensors = [value for value in vars(geometry).values() if isinstance(value, torch.Tensor) and value.requires_grad]
+&gt;       assert len(tensors) == 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+tests/test_nested_tensor_geometry.py:99: AssertionError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_other_vector_dimensions_keep_tensor_graph[&lt;lambda&gt;2]" time="0.001"><failure message="assert 0 == 1&#10; +  where 0 = len([])">factory = &lt;function &lt;lambda&gt; at 0x750487b61da0&gt;
+
+    @pytest.mark.parametrize('factory', [lambda x: Box(size=x), lambda x: Ellipsoid(radii=x), lambda x: HollowBox(outer_size=x), lambda x: HollowBox(inner_size=x)])
+    def test_other_vector_dimensions_keep_tensor_graph(factory):
+        x = torch.tensor(1.4, dtype=torch.float64, requires_grad=True)
+        geometry = factory((x, x*.9, x*.8))
+        tensors = [value for value in vars(geometry).values() if isinstance(value, torch.Tensor) and value.requires_grad]
+&gt;       assert len(tensors) == 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+tests/test_nested_tensor_geometry.py:99: AssertionError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_other_vector_dimensions_keep_tensor_graph[&lt;lambda&gt;3]" time="0.001"><failure message="assert 0 == 1&#10; +  where 0 = len([])">factory = &lt;function &lt;lambda&gt; at 0x750487b61e40&gt;
+
+    @pytest.mark.parametrize('factory', [lambda x: Box(size=x), lambda x: Ellipsoid(radii=x), lambda x: HollowBox(outer_size=x), lambda x: HollowBox(inner_size=x)])
+    def test_other_vector_dimensions_keep_tensor_graph(factory):
+        x = torch.tensor(1.4, dtype=torch.float64, requires_grad=True)
+        geometry = factory((x, x*.9, x*.8))
+        tensors = [value for value in vars(geometry).values() if isinstance(value, torch.Tensor) and value.requires_grad]
+&gt;       assert len(tensors) == 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+tests/test_nested_tensor_geometry.py:99: AssertionError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_nested_device_none_infers_authored_device_without_cuda[position]" time="0.012"><failure message="RuntimeError: Tensor.item() cannot be called on meta tensors">slot = 'position'
+
+    @pytest.mark.parametrize('slot', ['position', 'size', 'rotation'])
+    def test_nested_device_none_infers_authored_device_without_cuda(slot):
+        x = torch.empty((), device='meta', dtype=torch.float64, requires_grad=True)
+&gt;       box = Box(**{slot: (x, 0., 0.)}, device=None)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_nested_tensor_geometry.py:106: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+witwin/core/geometry/primitives.py:90: in __init__
+    super().__init__(position=position, rotation=rotation, device=resolved_device)
+witwin/core/geometry/base.py:207: in __init__
+    self.position: torch.Tensor = _as_position(
+witwin/core/geometry/base.py:53: in _as_position
+    return torch.tensor([float(v) for v in value], dtype=torch.float32, device=device)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^
+witwin/core/geometry/base.py:53: in &lt;listcomp&gt;
+    return torch.tensor([float(v) for v in value], dtype=torch.float32, device=device)
+                         ^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = tensor(..., device='meta', size=(), dtype=torch.float64, requires_grad=True)
+
+    @register_meta(aten._local_scalar_dense)
+    def meta_local_scalar_dense(self: Tensor):
+&gt;       raise RuntimeError("Tensor.item() cannot be called on meta tensors")
+E       RuntimeError: Tensor.item() cannot be called on meta tensors
+
+/home/xingyu/miniconda3/envs/maxwell/lib/python3.11/site-packages/torch/_meta_registrations.py:8550: RuntimeError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_nested_device_none_infers_authored_device_without_cuda[size]" time="0.001"><failure message="RuntimeError: Tensor.item() cannot be called on meta tensors">slot = 'size'
+
+    @pytest.mark.parametrize('slot', ['position', 'size', 'rotation'])
+    def test_nested_device_none_infers_authored_device_without_cuda(slot):
+        x = torch.empty((), device='meta', dtype=torch.float64, requires_grad=True)
+&gt;       box = Box(**{slot: (x, 0., 0.)}, device=None)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_nested_tensor_geometry.py:106: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+witwin/core/geometry/primitives.py:91: in __init__
+    self.size: torch.Tensor = _as_vec3(size, device=resolved_device)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+witwin/core/geometry/base.py:91: in _as_vec3
+    return torch.tensor([float(v) for v in value], dtype=torch.float32, device=device)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^
+witwin/core/geometry/base.py:91: in &lt;listcomp&gt;
+    return torch.tensor([float(v) for v in value], dtype=torch.float32, device=device)
+                         ^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = tensor(..., device='meta', size=(), dtype=torch.float64, requires_grad=True)
+
+    @register_meta(aten._local_scalar_dense)
+    def meta_local_scalar_dense(self: Tensor):
+&gt;       raise RuntimeError("Tensor.item() cannot be called on meta tensors")
+E       RuntimeError: Tensor.item() cannot be called on meta tensors
+
+/home/xingyu/miniconda3/envs/maxwell/lib/python3.11/site-packages/torch/_meta_registrations.py:8550: RuntimeError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_nested_device_none_infers_authored_device_without_cuda[rotation]" time="0.001"><failure message="RuntimeError: Tensor.item() cannot be called on meta tensors">slot = 'rotation'
+
+    @pytest.mark.parametrize('slot', ['position', 'size', 'rotation'])
+    def test_nested_device_none_infers_authored_device_without_cuda(slot):
+        x = torch.empty((), device='meta', dtype=torch.float64, requires_grad=True)
+&gt;       box = Box(**{slot: (x, 0., 0.)}, device=None)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_nested_tensor_geometry.py:106: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+witwin/core/geometry/primitives.py:90: in __init__
+    super().__init__(position=position, rotation=rotation, device=resolved_device)
+witwin/core/geometry/base.py:210: in __init__
+    self.rotation: torch.Tensor = _as_rotation(
+witwin/core/geometry/base.py:69: in _as_rotation
+    return quat_from_euler(float(seq[0]), float(seq[1]), float(seq[2]), device=device)
+                           ^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = tensor(..., device='meta', size=(), dtype=torch.float64, requires_grad=True)
+
+    @register_meta(aten._local_scalar_dense)
+    def meta_local_scalar_dense(self: Tensor):
+&gt;       raise RuntimeError("Tensor.item() cannot be called on meta tensors")
+E       RuntimeError: Tensor.item() cannot be called on meta tensors
+
+/home/xingyu/miniconda3/envs/maxwell/lib/python3.11/site-packages/torch/_meta_registrations.py:8550: RuntimeError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_conflicting_nested_devices_reject_without_coercion[False]" time="0.001"><failure message="RuntimeError: Tensor.item() cannot be called on meta tensors">reverse = False
+
+    @pytest.mark.parametrize('reverse', [False, True])
+    def test_conflicting_nested_devices_reject_without_coercion(reverse):
+        values = (torch.ones((), device='cpu'), torch.empty((), device='meta'), 0.)
+        if reverse:
+            values = tuple(reversed(values))
+        with pytest.raises(ValueError, match='Geometry tensor device'):
+&gt;           Box(position=values)
+
+tests/test_nested_tensor_geometry.py:118: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+witwin/core/geometry/primitives.py:90: in __init__
+    super().__init__(position=position, rotation=rotation, device=resolved_device)
+witwin/core/geometry/base.py:207: in __init__
+    self.position: torch.Tensor = _as_position(
+witwin/core/geometry/base.py:53: in _as_position
+    return torch.tensor([float(v) for v in value], dtype=torch.float32, device=device)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^
+witwin/core/geometry/base.py:53: in &lt;listcomp&gt;
+    return torch.tensor([float(v) for v in value], dtype=torch.float32, device=device)
+                         ^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = tensor(..., device='meta', size=())
+
+    @register_meta(aten._local_scalar_dense)
+    def meta_local_scalar_dense(self: Tensor):
+&gt;       raise RuntimeError("Tensor.item() cannot be called on meta tensors")
+E       RuntimeError: Tensor.item() cannot be called on meta tensors
+
+/home/xingyu/miniconda3/envs/maxwell/lib/python3.11/site-packages/torch/_meta_registrations.py:8550: RuntimeError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_conflicting_nested_devices_reject_without_coercion[True]" time="0.001"><failure message="RuntimeError: Tensor.item() cannot be called on meta tensors">reverse = True
+
+    @pytest.mark.parametrize('reverse', [False, True])
+    def test_conflicting_nested_devices_reject_without_coercion(reverse):
+        values = (torch.ones((), device='cpu'), torch.empty((), device='meta'), 0.)
+        if reverse:
+            values = tuple(reversed(values))
+        with pytest.raises(ValueError, match='Geometry tensor device'):
+&gt;           Box(position=values)
+
+tests/test_nested_tensor_geometry.py:118: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+witwin/core/geometry/primitives.py:90: in __init__
+    super().__init__(position=position, rotation=rotation, device=resolved_device)
+witwin/core/geometry/base.py:207: in __init__
+    self.position: torch.Tensor = _as_position(
+witwin/core/geometry/base.py:53: in _as_position
+    return torch.tensor([float(v) for v in value], dtype=torch.float32, device=device)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^
+witwin/core/geometry/base.py:53: in &lt;listcomp&gt;
+    return torch.tensor([float(v) for v in value], dtype=torch.float32, device=device)
+                         ^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = tensor(..., device='meta', size=())
+
+    @register_meta(aten._local_scalar_dense)
+    def meta_local_scalar_dense(self: Tensor):
+&gt;       raise RuntimeError("Tensor.item() cannot be called on meta tensors")
+E       RuntimeError: Tensor.item() cannot be called on meta tensors
+
+/home/xingyu/miniconda3/envs/maxwell/lib/python3.11/site-packages/torch/_meta_registrations.py:8550: RuntimeError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_explicit_device_conflict_rejects_without_copying" time="0.001"><failure message="Failed: DID NOT RAISE ValueError">def test_explicit_device_conflict_rejects_without_copying():
+        x = torch.tensor(.2, requires_grad=True)
+&gt;       with pytest.raises(ValueError, match='Geometry tensor device'):
+E       Failed: DID NOT RAISE ValueError
+
+tests/test_nested_tensor_geometry.py:123: Failed</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_nested_nonscalar_tensor_rejects_instead_of_float_coercion[position]" time="0.001"><failure message="Failed: DID NOT RAISE ValueError">slot = 'position'
+
+    @pytest.mark.parametrize('slot', ['position', 'size', 'rotation'])
+    def test_nested_nonscalar_tensor_rejects_instead_of_float_coercion(slot):
+        x = torch.ones(1, requires_grad=True)
+&gt;       with pytest.raises(ValueError, match='components must be scalar'):
+E       Failed: DID NOT RAISE ValueError
+
+tests/test_nested_tensor_geometry.py:130: Failed</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_nested_nonscalar_tensor_rejects_instead_of_float_coercion[size]" time="0.001"><failure message="Failed: DID NOT RAISE ValueError">slot = 'size'
+
+    @pytest.mark.parametrize('slot', ['position', 'size', 'rotation'])
+    def test_nested_nonscalar_tensor_rejects_instead_of_float_coercion(slot):
+        x = torch.ones(1, requires_grad=True)
+&gt;       with pytest.raises(ValueError, match='components must be scalar'):
+E       Failed: DID NOT RAISE ValueError
+
+tests/test_nested_tensor_geometry.py:130: Failed</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_nested_nonscalar_tensor_rejects_instead_of_float_coercion[rotation]" time="0.001"><failure message="Failed: DID NOT RAISE ValueError">slot = 'rotation'
+
+    @pytest.mark.parametrize('slot', ['position', 'size', 'rotation'])
+    def test_nested_nonscalar_tensor_rejects_instead_of_float_coercion(slot):
+        x = torch.ones(1, requires_grad=True)
+&gt;       with pytest.raises(ValueError, match='components must be scalar'):
+E       Failed: DID NOT RAISE ValueError
+
+tests/test_nested_tensor_geometry.py:130: Failed</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_serialized_geometry_preserves_values_dtype_and_trainable_state[position-3]" time="0.466"><failure message="assert (torch.float32 == torch.float64)&#10; +  where torch.float32 = tensor([0.1700, 0.4400, 0.7100]).dtype&#10; +  and   torch.float64 = torch.float64">slot = 'position', length = 3
+
+    @pytest.mark.parametrize('slot,length', [('position', 3), ('size', 3), ('rotation', 3), ('rotation', 4)])
+    def test_serialized_geometry_preserves_values_dtype_and_trainable_state(slot, length):
+        x = torch.tensor(.17, dtype=torch.float64, requires_grad=True)
+        geometry = Box(**{slot: vector(x, length)})
+        stream = io.BytesIO()
+        torch.save(geometry, stream)
+        stream.seek(0)
+        restored = torch.load(stream, weights_only=False, map_location='cpu')
+        expected, actual = getattr(geometry, slot), getattr(restored, slot)
+        torch.testing.assert_close(actual, expected, rtol=0, atol=0)
+&gt;       assert actual.dtype == torch.float64 and actual.requires_grad
+E       assert (torch.float32 == torch.float64)
+E        +  where torch.float32 = tensor([0.1700, 0.4400, 0.7100]).dtype
+E        +  and   torch.float64 = torch.float64
+
+tests/test_nested_tensor_geometry.py:144: AssertionError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_serialized_geometry_preserves_values_dtype_and_trainable_state[size-3]" time="0.002"><failure message="assert (torch.float32 == torch.float64)&#10; +  where torch.float32 = tensor([0.1700, 0.4400, 0.7100]).dtype&#10; +  and   torch.float64 = torch.float64">slot = 'size', length = 3
+
+    @pytest.mark.parametrize('slot,length', [('position', 3), ('size', 3), ('rotation', 3), ('rotation', 4)])
+    def test_serialized_geometry_preserves_values_dtype_and_trainable_state(slot, length):
+        x = torch.tensor(.17, dtype=torch.float64, requires_grad=True)
+        geometry = Box(**{slot: vector(x, length)})
+        stream = io.BytesIO()
+        torch.save(geometry, stream)
+        stream.seek(0)
+        restored = torch.load(stream, weights_only=False, map_location='cpu')
+        expected, actual = getattr(geometry, slot), getattr(restored, slot)
+        torch.testing.assert_close(actual, expected, rtol=0, atol=0)
+&gt;       assert actual.dtype == torch.float64 and actual.requires_grad
+E       assert (torch.float32 == torch.float64)
+E        +  where torch.float32 = tensor([0.1700, 0.4400, 0.7100]).dtype
+E        +  and   torch.float64 = torch.float64
+
+tests/test_nested_tensor_geometry.py:144: AssertionError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_serialized_geometry_preserves_values_dtype_and_trainable_state[rotation-3]" time="0.002"><failure message="assert (torch.float32 == torch.float64)&#10; +  where torch.float32 = tensor([0.9182, 0.0021, 0.2327, 0.3206]).dtype&#10; +  and   torch.float64 = torch.float64">slot = 'rotation', length = 3
+
+    @pytest.mark.parametrize('slot,length', [('position', 3), ('size', 3), ('rotation', 3), ('rotation', 4)])
+    def test_serialized_geometry_preserves_values_dtype_and_trainable_state(slot, length):
+        x = torch.tensor(.17, dtype=torch.float64, requires_grad=True)
+        geometry = Box(**{slot: vector(x, length)})
+        stream = io.BytesIO()
+        torch.save(geometry, stream)
+        stream.seek(0)
+        restored = torch.load(stream, weights_only=False, map_location='cpu')
+        expected, actual = getattr(geometry, slot), getattr(restored, slot)
+        torch.testing.assert_close(actual, expected, rtol=0, atol=0)
+&gt;       assert actual.dtype == torch.float64 and actual.requires_grad
+E       assert (torch.float32 == torch.float64)
+E        +  where torch.float32 = tensor([0.9182, 0.0021, 0.2327, 0.3206]).dtype
+E        +  and   torch.float64 = torch.float64
+
+tests/test_nested_tensor_geometry.py:144: AssertionError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_serialized_geometry_preserves_values_dtype_and_trainable_state[rotation-4]" time="0.002"><failure message="assert (torch.float32 == torch.float64)&#10; +  where torch.float32 = tensor([0.1700, 0.4400, 0.7100, 0.9800]).dtype&#10; +  and   torch.float64 = torch.float64">slot = 'rotation', length = 4
+
+    @pytest.mark.parametrize('slot,length', [('position', 3), ('size', 3), ('rotation', 3), ('rotation', 4)])
+    def test_serialized_geometry_preserves_values_dtype_and_trainable_state(slot, length):
+        x = torch.tensor(.17, dtype=torch.float64, requires_grad=True)
+        geometry = Box(**{slot: vector(x, length)})
+        stream = io.BytesIO()
+        torch.save(geometry, stream)
+        stream.seek(0)
+        restored = torch.load(stream, weights_only=False, map_location='cpu')
+        expected, actual = getattr(geometry, slot), getattr(restored, slot)
+        torch.testing.assert_close(actual, expected, rtol=0, atol=0)
+&gt;       assert actual.dtype == torch.float64 and actual.requires_grad
+E       assert (torch.float32 == torch.float64)
+E        +  where torch.float32 = tensor([0.1700, 0.4400, 0.7100, 0.9800]).dtype
+E        +  and   torch.float64 = torch.float64
+
+tests/test_nested_tensor_geometry.py:144: AssertionError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_box_signed_distance_gradcheck_and_stack_equivalence[position]" time="0.003"><failure message="torch.autograd.gradcheck.GradcheckError: Numerical gradient for function expected to be zero">slot = 'position'
+
+    @pytest.mark.parametrize('slot', ['position', 'size', 'rotation'])
+    def test_box_signed_distance_gradcheck_and_stack_equivalence(slot):
+        theta = torch.tensor(.17, dtype=torch.float64, requires_grad=True)
+        point = tuple(torch.tensor(value, dtype=torch.float64) for value in (1.4, .21, -.08))
+        def objective(parameter, stacked=False):
+            if slot == 'size':
+                values = (1. + parameter, 1.2 + parameter*.3, 1.1 + parameter*.2)
+            elif slot == 'position':
+                values = (parameter*.3, parameter*.2, parameter*.1)
+            else:
+                values = (parameter*.3, parameter*.2, parameter*.1)
+            geometry = Box(**{slot: torch.stack(values) if stacked else values})
+            return geometry.signed_distance(*point)
+&gt;       assert torch.autograd.gradcheck(objective, (theta,), eps=1e-6, atol=2e-9, rtol=2e-7)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_nested_tensor_geometry.py:164: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/home/xingyu/miniconda3/envs/maxwell/lib/python3.11/site-packages/torch/autograd/gradcheck.py:2104: in gradcheck
+    return _gradcheck_helper(**args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/xingyu/miniconda3/envs/maxwell/lib/python3.11/site-packages/torch/autograd/gradcheck.py:2133: in _gradcheck_helper
+    _gradcheck_real_imag(
+/home/xingyu/miniconda3/envs/maxwell/lib/python3.11/site-packages/torch/autograd/gradcheck.py:1517: in _gradcheck_real_imag
+    gradcheck_fn(
+/home/xingyu/miniconda3/envs/maxwell/lib/python3.11/site-packages/torch/autograd/gradcheck.py:1618: in _slow_gradcheck
+    return _check_no_differentiable_outputs(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+func = &lt;function test_box_signed_distance_gradcheck_and_stack_equivalence.&lt;locals&gt;.objective at 0x750485ffe840&gt;
+inputs = (tensor(0.1700, dtype=torch.float64, requires_grad=True),)
+func_out = (tensor(0.8490, dtype=torch.float64),), eps = 1e-06
+is_forward_ad = False
+
+    def _check_no_differentiable_outputs(
+        func, inputs, func_out, eps, *, is_forward_ad
+    ) -&gt; bool:
+        # When there are no differentiable outputs, numerical gradient for a function is
+        # expected to be zero.
+        jacobians_all_inputs_outputs = _get_numerical_jacobian(
+            func, inputs, func_out, eps=eps, is_forward_ad=is_forward_ad
+        )
+        for jacobians_all_outputs_and_fixed_input in jacobians_all_inputs_outputs:
+            for jacobian in jacobians_all_outputs_and_fixed_input:
+                if torch.ne(jacobian, 0).sum() &gt; 0:
+&gt;                   raise GradcheckError(
+                        "Numerical gradient for function expected to be zero"
+                    )
+E                   torch.autograd.gradcheck.GradcheckError: Numerical gradient for function expected to be zero
+
+/home/xingyu/miniconda3/envs/maxwell/lib/python3.11/site-packages/torch/autograd/gradcheck.py:1004: GradcheckError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_box_signed_distance_gradcheck_and_stack_equivalence[size]" time="0.002"><failure message="torch.autograd.gradcheck.GradcheckError: Numerical gradient for function expected to be zero">slot = 'size'
+
+    @pytest.mark.parametrize('slot', ['position', 'size', 'rotation'])
+    def test_box_signed_distance_gradcheck_and_stack_equivalence(slot):
+        theta = torch.tensor(.17, dtype=torch.float64, requires_grad=True)
+        point = tuple(torch.tensor(value, dtype=torch.float64) for value in (1.4, .21, -.08))
+        def objective(parameter, stacked=False):
+            if slot == 'size':
+                values = (1. + parameter, 1.2 + parameter*.3, 1.1 + parameter*.2)
+            elif slot == 'position':
+                values = (parameter*.3, parameter*.2, parameter*.1)
+            else:
+                values = (parameter*.3, parameter*.2, parameter*.1)
+            geometry = Box(**{slot: torch.stack(values) if stacked else values})
+            return geometry.signed_distance(*point)
+&gt;       assert torch.autograd.gradcheck(objective, (theta,), eps=1e-6, atol=2e-9, rtol=2e-7)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_nested_tensor_geometry.py:164: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/home/xingyu/miniconda3/envs/maxwell/lib/python3.11/site-packages/torch/autograd/gradcheck.py:2104: in gradcheck
+    return _gradcheck_helper(**args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/xingyu/miniconda3/envs/maxwell/lib/python3.11/site-packages/torch/autograd/gradcheck.py:2133: in _gradcheck_helper
+    _gradcheck_real_imag(
+/home/xingyu/miniconda3/envs/maxwell/lib/python3.11/site-packages/torch/autograd/gradcheck.py:1517: in _gradcheck_real_imag
+    gradcheck_fn(
+/home/xingyu/miniconda3/envs/maxwell/lib/python3.11/site-packages/torch/autograd/gradcheck.py:1618: in _slow_gradcheck
+    return _check_no_differentiable_outputs(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+func = &lt;function test_box_signed_distance_gradcheck_and_stack_equivalence.&lt;locals&gt;.objective at 0x750485fffc40&gt;
+inputs = (tensor(0.1700, dtype=torch.float64, requires_grad=True),)
+func_out = (tensor(0.8150, dtype=torch.float64),), eps = 1e-06
+is_forward_ad = False
+
+    def _check_no_differentiable_outputs(
+        func, inputs, func_out, eps, *, is_forward_ad
+    ) -&gt; bool:
+        # When there are no differentiable outputs, numerical gradient for a function is
+        # expected to be zero.
+        jacobians_all_inputs_outputs = _get_numerical_jacobian(
+            func, inputs, func_out, eps=eps, is_forward_ad=is_forward_ad
+        )
+        for jacobians_all_outputs_and_fixed_input in jacobians_all_inputs_outputs:
+            for jacobian in jacobians_all_outputs_and_fixed_input:
+                if torch.ne(jacobian, 0).sum() &gt; 0:
+&gt;                   raise GradcheckError(
+                        "Numerical gradient for function expected to be zero"
+                    )
+E                   torch.autograd.gradcheck.GradcheckError: Numerical gradient for function expected to be zero
+
+/home/xingyu/miniconda3/envs/maxwell/lib/python3.11/site-packages/torch/autograd/gradcheck.py:1004: GradcheckError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_box_signed_distance_gradcheck_and_stack_equivalence[rotation]" time="0.002"><failure message="torch.autograd.gradcheck.GradcheckError: Numerical gradient for function expected to be zero">slot = 'rotation'
+
+    @pytest.mark.parametrize('slot', ['position', 'size', 'rotation'])
+    def test_box_signed_distance_gradcheck_and_stack_equivalence(slot):
+        theta = torch.tensor(.17, dtype=torch.float64, requires_grad=True)
+        point = tuple(torch.tensor(value, dtype=torch.float64) for value in (1.4, .21, -.08))
+        def objective(parameter, stacked=False):
+            if slot == 'size':
+                values = (1. + parameter, 1.2 + parameter*.3, 1.1 + parameter*.2)
+            elif slot == 'position':
+                values = (parameter*.3, parameter*.2, parameter*.1)
+            else:
+                values = (parameter*.3, parameter*.2, parameter*.1)
+            geometry = Box(**{slot: torch.stack(values) if stacked else values})
+            return geometry.signed_distance(*point)
+&gt;       assert torch.autograd.gradcheck(objective, (theta,), eps=1e-6, atol=2e-9, rtol=2e-7)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_nested_tensor_geometry.py:164: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/home/xingyu/miniconda3/envs/maxwell/lib/python3.11/site-packages/torch/autograd/gradcheck.py:2104: in gradcheck
+    return _gradcheck_helper(**args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/xingyu/miniconda3/envs/maxwell/lib/python3.11/site-packages/torch/autograd/gradcheck.py:2133: in _gradcheck_helper
+    _gradcheck_real_imag(
+/home/xingyu/miniconda3/envs/maxwell/lib/python3.11/site-packages/torch/autograd/gradcheck.py:1517: in _gradcheck_real_imag
+    gradcheck_fn(
+/home/xingyu/miniconda3/envs/maxwell/lib/python3.11/site-packages/torch/autograd/gradcheck.py:1618: in _slow_gradcheck
+    return _check_no_differentiable_outputs(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+func = &lt;function test_box_signed_distance_gradcheck_and_stack_equivalence.&lt;locals&gt;.objective at 0x750485fffa60&gt;
+inputs = (tensor(0.1700, dtype=torch.float64, requires_grad=True),)
+func_out = (tensor(0.9053, dtype=torch.float64),), eps = 1e-06
+is_forward_ad = False
+
+    def _check_no_differentiable_outputs(
+        func, inputs, func_out, eps, *, is_forward_ad
+    ) -&gt; bool:
+        # When there are no differentiable outputs, numerical gradient for a function is
+        # expected to be zero.
+        jacobians_all_inputs_outputs = _get_numerical_jacobian(
+            func, inputs, func_out, eps=eps, is_forward_ad=is_forward_ad
+        )
+        for jacobians_all_outputs_and_fixed_input in jacobians_all_inputs_outputs:
+            for jacobian in jacobians_all_outputs_and_fixed_input:
+                if torch.ne(jacobian, 0).sum() &gt; 0:
+&gt;                   raise GradcheckError(
+                        "Numerical gradient for function expected to be zero"
+                    )
+E                   torch.autograd.gradcheck.GradcheckError: Numerical gradient for function expected to be zero
+
+/home/xingyu/miniconda3/envs/maxwell/lib/python3.11/site-packages/torch/autograd/gradcheck.py:1004: GradcheckError</failure></testcase><testcase classname="tests.test_nested_tensor_geometry" name="test_constructor_device_default_remains_none" time="0.001" /></testsuite></testsuites>

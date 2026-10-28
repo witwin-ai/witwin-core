@@ -1,0 +1,18 @@
+{
+  "handoff-manifest.json": "1d5409d38fa4c1c49fda1d010da91b2cbe57076b4afca1fd23c44ce61a62c9b5",
+  "maxwell-integration.json": "c4ee901e15e18642dfb0f8a5ece4e8ab770a7e93eb6e077a092efb7320c39d56",
+  "README.md": "b02334c35ca9d60161fe3cabbcebcb8ed0df5a7b8bc9e33669964aba7e516d33",
+  "installed-baseline-focused.json": "4762c85e6f3ffb04299b68b2e420dc2e7f0a4ed483847f75af6249714f52bb4c",
+  "installed-baseline-focused.xml": "604358bc16ba335b4bc9ae14c55c9b2c3944094ef831c75f08b9baf7ede2b6a0",
+  "installed-baseline-focused.log": "60bd1632cbaf90a7a9086992251933a7f098145463e5f8a6be87616b17931509",
+  "installed-candidate-focused.json": "a91b7b894f9bc5692bb9cb1cb38451976697bb4c8c861912d7ced0df68c9f16e",
+  "installed-vs-checkout.json": "12adee594a2cbdc084fed1f0041ac1450deb49c6532fdcaa0f127e995015686f",
+  "installed-candidate-focused.xml": "5efda97b12e8410116da6760c5e8da38954305e80b79c47c6c89f389c1285ac9",
+  "core-complete-cpu.xml": "f23847260a516609cf3e99b45d2304c1e6801bb5f713a8f2fe45d684b36049e6",
+  "installed-fix-and-contracts.patch": "bcbfcaac5ffb97e250efd5656199bc7dfbf6e6f5206cedbd37644c1d5a2f4b77",
+  "installed-candidate-focused.log": "112af6df5a1072b75caa15b25538e27987f38a5ce82f08e8633956b0e3247df4",
+  "maxwell-integration.xml": "8b1b11030d09108d118f10ea4e862f0ad4c0079b50cce29b9c5e8b906a030f3c",
+  "integration.md": "21508894431bdd6689eb0d7c59e53a85cb1616b6a86d312004f6186bcdc43abc",
+  "maxwell-integration.log": "d761a06364b4acd0706f17111682e63ff4c17e2b98806aa686a75f4142d623f3",
+  "release-source-match.json": "eb3511c00a354f3767c8dd06ae0ca2fea5a5863adba0d0c2c6bf4f8d80e62dc2"
+}

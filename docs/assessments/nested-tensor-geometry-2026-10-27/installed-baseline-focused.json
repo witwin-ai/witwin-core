@@ -1,0 +1,177 @@
+{
+  "schema": "core-nested-tensor-cpu/1",
+  "variant": "installed-baseline",
+  "before": {
+    "actual_imported_core": {
+      "sources": {
+        "__init__.py": "c62f9be910ebfdb24621dcde0039b200e28751a3f47c1a0f5963a6425052face",
+        "antenna.py": "b9eb4bf1346ac28d374bc306b7828117f2f0021e9e74b516d7886208aeb1608d",
+        "dynamics.py": "c27ef9f55af8ecfda7aa474a56ca3e820b15982e1e853d88027e5a04e915523e",
+        "geometry/__init__.py": "89240d5760c0b870e28f3d16dc21a34a71e87087b5ab9c4874a56867f31899c8",
+        "geometry/base.py": "7ba13b0f277061f52d742b574852657cee95ed4288898ab98f434db671f036f6",
+        "geometry/mesh.py": "35040e8cf149399c827c7488a3f8cb691acaa103d13d8e5b58c7615dad29fd94",
+        "geometry/mesh_sdf.py": "6fafe5eff5827fcffd4b4c165f6f1c14777b680c2eff50d7a4500a92b2b25d27",
+        "geometry/polygon.py": "6d7a3cf2a49ab9dea938ee73067bbaa3a300f81c84286e1a402d00d051fcd831",
+        "geometry/primitives.py": "edd915d595d3ba23f1934003f28ec4239d5d2a01e5cfb46c9275c2a5c8b6fdf4",
+        "identity.py": "5b0fc9caac1478b8847c7c84f51d740a0b5b34232ade556feba8d0b9f8a5645f",
+        "material.py": "ff6aeb6a12c393bd0a9bda43c7a464e90b9dd309501936f1bae0dd526a6ed560",
+        "math.py": "2fd79ae1d4f2106d936ffb8003957de2b7ac1a7e4c83ab1a286b72409bdf0aeb",
+        "scene.py": "7157cf840857c19c050f9f7c02329cf92095db374e63d8b77bd0c99c5db424c9",
+        "structure.py": "049242712bc4405986eeb614cf5129c8fd5e39986ed69790b85b3b044e016546"
+      },
+      "source_sha256": "b063986f4cbcc270b80c1d963cc983696f5b1c755826058220a6be1f0213a784"
+    },
+    "original_installed_core": {
+      "sources": {
+        "__init__.py": "c62f9be910ebfdb24621dcde0039b200e28751a3f47c1a0f5963a6425052face",
+        "antenna.py": "b9eb4bf1346ac28d374bc306b7828117f2f0021e9e74b516d7886208aeb1608d",
+        "dynamics.py": "c27ef9f55af8ecfda7aa474a56ca3e820b15982e1e853d88027e5a04e915523e",
+        "geometry/__init__.py": "89240d5760c0b870e28f3d16dc21a34a71e87087b5ab9c4874a56867f31899c8",
+        "geometry/base.py": "7ba13b0f277061f52d742b574852657cee95ed4288898ab98f434db671f036f6",
+        "geometry/mesh.py": "35040e8cf149399c827c7488a3f8cb691acaa103d13d8e5b58c7615dad29fd94",
+        "geometry/mesh_sdf.py": "6fafe5eff5827fcffd4b4c165f6f1c14777b680c2eff50d7a4500a92b2b25d27",
+        "geometry/polygon.py": "6d7a3cf2a49ab9dea938ee73067bbaa3a300f81c84286e1a402d00d051fcd831",
+        "geometry/primitives.py": "edd915d595d3ba23f1934003f28ec4239d5d2a01e5cfb46c9275c2a5c8b6fdf4",
+        "identity.py": "5b0fc9caac1478b8847c7c84f51d740a0b5b34232ade556feba8d0b9f8a5645f",
+        "material.py": "ff6aeb6a12c393bd0a9bda43c7a464e90b9dd309501936f1bae0dd526a6ed560",
+        "math.py": "2fd79ae1d4f2106d936ffb8003957de2b7ac1a7e4c83ab1a286b72409bdf0aeb",
+        "scene.py": "7157cf840857c19c050f9f7c02329cf92095db374e63d8b77bd0c99c5db424c9",
+        "structure.py": "049242712bc4405986eeb614cf5129c8fd5e39986ed69790b85b3b044e016546"
+      },
+      "source_sha256": "b063986f4cbcc270b80c1d963cc983696f5b1c755826058220a6be1f0213a784"
+    },
+    "unchanged_core_checkout": {
+      "sources": {
+        "__init__.py": "37baac6bc9e04cfd5e2f00d8259415ca9d8aa783b11d13d3cac00522d2ae52d8",
+        "geometry/__init__.py": "89240d5760c0b870e28f3d16dc21a34a71e87087b5ab9c4874a56867f31899c8",
+        "geometry/base.py": "874a954e544f5dc83c5f525f4fae540f2a83bb3668c7347bac60a4fe59116ed7",
+        "geometry/cuda/__init__.py": "3238b5e9498aaaaba45cb3b9d0a0cbe3bd0f09980bcdf8f50f813ef7bbe66d6c",
+        "geometry/cuda/backend.py": "9a97d1a837355f2383097ef48d9cb7ed9eb82edaa31df651217f3e49bf1b2fec",
+        "geometry/cuda/build.py": "998fe3b58121c3ad5228519cbaf51b4ab88253f3baa2b10da6c10e35a2e87cc3",
+        "geometry/cuda/extension.cpp": "d5698d4149498559166aab7bf318f43d35f1c9a9586e3a2f6f73b979556e441f",
+        "geometry/cuda/mesh_sdf_kernels.cu": "3486431a4189492d421a65e4b82f911d030932c5d87298074672dc0e0d53b5f1",
+        "geometry/mesh.py": "3db50faa52664081252fa85e2279cc3218d4ea424c5f8ac868f11f55d7aa463e",
+        "geometry/mesh_sdf.py": "e87eb1427da6833130d7aa5df1eabc6ece3717299ca3ec5d1c21f888e82831b8",
+        "geometry/polygon.py": "6d7a3cf2a49ab9dea938ee73067bbaa3a300f81c84286e1a402d00d051fcd831",
+        "geometry/primitives.py": "f5437f98ad6c2107160a35902ad318afafdb3d10d59eb130980912eb04df7f10",
+        "material.py": "b6cc3dba48ede8c40f8683d09227036a143dd7de1ee91e8074be89f10cba91ca",
+        "math.py": "b2f71594f3fa556605b80cd0385c01156128a2638831ae8b638111c3df8699cb"
+      },
+      "source_sha256": "e9b0e5a3ef703ddbbe12cf773d78805906cc33122d1b58a47b3e484fbd1cfb5b"
+    },
+    "tests": {
+      "sources": {
+        "conftest.py": "70011e0c7b2a7fef891fe6120103e4c8d2c58123cb9f7cb952f4e16c3fbbccbc",
+        "test_contracts.py": "678d1cae43031ed50ab9a8983de2f5c962ae4d502a660d9ab0efe8e5cbe995ea",
+        "test_dependency_contract.py": "1837e32f0a6dd8b8f316c91827bff59b9807ffcd7f99aada9c9b5046798bd91d",
+        "test_geometry_sdf.py": "ca469e5e2e93ff30f88f24e7aef12c30063cadf967bcd3d95290ae18f5a9839e",
+        "test_geometry_smoke.py": "49d73fee3157e34239dee7262c086df1fbbf4c7be4779f9c806a3c9014856f7b",
+        "test_nested_tensor_geometry.py": "301443740bb01fea899233439903d33a1213786531c227dec6e602d060cefdcc"
+      },
+      "source_sha256": "92661dac5608c2beba5370d2ba4e85f6515955582f77a0c405fee6b54d0cb01a"
+    },
+    "controls": {
+      "/tmp/pcb-core-nested-tensor-20261027/bound_control.py": "7f91094b0f002a4c44fb7b34fc6385d0f57fe73836da4a162e95dc1ec66e4b99",
+      "/tmp/pcb-core-nested-tensor-20261027/test_nested_tensor_geometry.py": "301443740bb01fea899233439903d33a1213786531c227dec6e602d060cefdcc",
+      "/tmp/pcb-core-nested-build.py": "9768f5a8c2902582c71a124637f561fc9807ff0bab1596b76bff4b12b554c0b6"
+    }
+  },
+  "after": {
+    "actual_imported_core": {
+      "sources": {
+        "__init__.py": "c62f9be910ebfdb24621dcde0039b200e28751a3f47c1a0f5963a6425052face",
+        "antenna.py": "b9eb4bf1346ac28d374bc306b7828117f2f0021e9e74b516d7886208aeb1608d",
+        "dynamics.py": "c27ef9f55af8ecfda7aa474a56ca3e820b15982e1e853d88027e5a04e915523e",
+        "geometry/__init__.py": "89240d5760c0b870e28f3d16dc21a34a71e87087b5ab9c4874a56867f31899c8",
+        "geometry/base.py": "7ba13b0f277061f52d742b574852657cee95ed4288898ab98f434db671f036f6",
+        "geometry/mesh.py": "35040e8cf149399c827c7488a3f8cb691acaa103d13d8e5b58c7615dad29fd94",
+        "geometry/mesh_sdf.py": "6fafe5eff5827fcffd4b4c165f6f1c14777b680c2eff50d7a4500a92b2b25d27",
+        "geometry/polygon.py": "6d7a3cf2a49ab9dea938ee73067bbaa3a300f81c84286e1a402d00d051fcd831",
+        "geometry/primitives.py": "edd915d595d3ba23f1934003f28ec4239d5d2a01e5cfb46c9275c2a5c8b6fdf4",
+        "identity.py": "5b0fc9caac1478b8847c7c84f51d740a0b5b34232ade556feba8d0b9f8a5645f",
+        "material.py": "ff6aeb6a12c393bd0a9bda43c7a464e90b9dd309501936f1bae0dd526a6ed560",
+        "math.py": "2fd79ae1d4f2106d936ffb8003957de2b7ac1a7e4c83ab1a286b72409bdf0aeb",
+        "scene.py": "7157cf840857c19c050f9f7c02329cf92095db374e63d8b77bd0c99c5db424c9",
+        "structure.py": "049242712bc4405986eeb614cf5129c8fd5e39986ed69790b85b3b044e016546"
+      },
+      "source_sha256": "b063986f4cbcc270b80c1d963cc983696f5b1c755826058220a6be1f0213a784"
+    },
+    "original_installed_core": {
+      "sources": {
+        "__init__.py": "c62f9be910ebfdb24621dcde0039b200e28751a3f47c1a0f5963a6425052face",
+        "antenna.py": "b9eb4bf1346ac28d374bc306b7828117f2f0021e9e74b516d7886208aeb1608d",
+        "dynamics.py": "c27ef9f55af8ecfda7aa474a56ca3e820b15982e1e853d88027e5a04e915523e",
+        "geometry/__init__.py": "89240d5760c0b870e28f3d16dc21a34a71e87087b5ab9c4874a56867f31899c8",
+        "geometry/base.py": "7ba13b0f277061f52d742b574852657cee95ed4288898ab98f434db671f036f6",
+        "geometry/mesh.py": "35040e8cf149399c827c7488a3f8cb691acaa103d13d8e5b58c7615dad29fd94",
+        "geometry/mesh_sdf.py": "6fafe5eff5827fcffd4b4c165f6f1c14777b680c2eff50d7a4500a92b2b25d27",
+        "geometry/polygon.py": "6d7a3cf2a49ab9dea938ee73067bbaa3a300f81c84286e1a402d00d051fcd831",
+        "geometry/primitives.py": "edd915d595d3ba23f1934003f28ec4239d5d2a01e5cfb46c9275c2a5c8b6fdf4",
+        "identity.py": "5b0fc9caac1478b8847c7c84f51d740a0b5b34232ade556feba8d0b9f8a5645f",
+        "material.py": "ff6aeb6a12c393bd0a9bda43c7a464e90b9dd309501936f1bae0dd526a6ed560",
+        "math.py": "2fd79ae1d4f2106d936ffb8003957de2b7ac1a7e4c83ab1a286b72409bdf0aeb",
+        "scene.py": "7157cf840857c19c050f9f7c02329cf92095db374e63d8b77bd0c99c5db424c9",
+        "structure.py": "049242712bc4405986eeb614cf5129c8fd5e39986ed69790b85b3b044e016546"
+      },
+      "source_sha256": "b063986f4cbcc270b80c1d963cc983696f5b1c755826058220a6be1f0213a784"
+    },
+    "unchanged_core_checkout": {
+      "sources": {
+        "__init__.py": "37baac6bc9e04cfd5e2f00d8259415ca9d8aa783b11d13d3cac00522d2ae52d8",
+        "geometry/__init__.py": "89240d5760c0b870e28f3d16dc21a34a71e87087b5ab9c4874a56867f31899c8",
+        "geometry/base.py": "874a954e544f5dc83c5f525f4fae540f2a83bb3668c7347bac60a4fe59116ed7",
+        "geometry/cuda/__init__.py": "3238b5e9498aaaaba45cb3b9d0a0cbe3bd0f09980bcdf8f50f813ef7bbe66d6c",
+        "geometry/cuda/backend.py": "9a97d1a837355f2383097ef48d9cb7ed9eb82edaa31df651217f3e49bf1b2fec",
+        "geometry/cuda/build.py": "998fe3b58121c3ad5228519cbaf51b4ab88253f3baa2b10da6c10e35a2e87cc3",
+        "geometry/cuda/extension.cpp": "d5698d4149498559166aab7bf318f43d35f1c9a9586e3a2f6f73b979556e441f",
+        "geometry/cuda/mesh_sdf_kernels.cu": "3486431a4189492d421a65e4b82f911d030932c5d87298074672dc0e0d53b5f1",
+        "geometry/mesh.py": "3db50faa52664081252fa85e2279cc3218d4ea424c5f8ac868f11f55d7aa463e",
+        "geometry/mesh_sdf.py": "e87eb1427da6833130d7aa5df1eabc6ece3717299ca3ec5d1c21f888e82831b8",
+        "geometry/polygon.py": "6d7a3cf2a49ab9dea938ee73067bbaa3a300f81c84286e1a402d00d051fcd831",
+        "geometry/primitives.py": "f5437f98ad6c2107160a35902ad318afafdb3d10d59eb130980912eb04df7f10",
+        "material.py": "b6cc3dba48ede8c40f8683d09227036a143dd7de1ee91e8074be89f10cba91ca",
+        "math.py": "b2f71594f3fa556605b80cd0385c01156128a2638831ae8b638111c3df8699cb"
+      },
+      "source_sha256": "e9b0e5a3ef703ddbbe12cf773d78805906cc33122d1b58a47b3e484fbd1cfb5b"
+    },
+    "tests": {
+      "sources": {
+        "conftest.py": "70011e0c7b2a7fef891fe6120103e4c8d2c58123cb9f7cb952f4e16c3fbbccbc",
+        "test_contracts.py": "678d1cae43031ed50ab9a8983de2f5c962ae4d502a660d9ab0efe8e5cbe995ea",
+        "test_dependency_contract.py": "1837e32f0a6dd8b8f316c91827bff59b9807ffcd7f99aada9c9b5046798bd91d",
+        "test_geometry_sdf.py": "ca469e5e2e93ff30f88f24e7aef12c30063cadf967bcd3d95290ae18f5a9839e",
+        "test_geometry_smoke.py": "49d73fee3157e34239dee7262c086df1fbbf4c7be4779f9c806a3c9014856f7b",
+        "test_nested_tensor_geometry.py": "301443740bb01fea899233439903d33a1213786531c227dec6e602d060cefdcc"
+      },
+      "source_sha256": "92661dac5608c2beba5370d2ba4e85f6515955582f77a0c405fee6b54d0cb01a"
+    },
+    "controls": {
+      "/tmp/pcb-core-nested-tensor-20261027/bound_control.py": "7f91094b0f002a4c44fb7b34fc6385d0f57fe73836da4a162e95dc1ec66e4b99",
+      "/tmp/pcb-core-nested-tensor-20261027/test_nested_tensor_geometry.py": "301443740bb01fea899233439903d33a1213786531c227dec6e602d060cefdcc",
+      "/tmp/pcb-core-nested-build.py": "9768f5a8c2902582c71a124637f561fc9807ff0bab1596b76bff4b12b554c0b6"
+    }
+  },
+  "source_unchanged": true,
+  "result": {
+    "tests": 49,
+    "failures": 39,
+    "errors": 0,
+    "skipped": 0,
+    "junit_seconds": 1.963
+  },
+  "exit_code": 1,
+  "pytest_wall_seconds": 2.1266332622617483,
+  "actual_import": "/tmp/pcb-core-nested-tensor-20261027/installed-baseline/witwin/core/__init__.py",
+  "actual_package_version": "0.4.0",
+  "installed_distribution_version": "0.4.0",
+  "python": "/home/xingyu/miniconda3/envs/maxwell/bin/python",
+  "torch": "2.13.0+cu130",
+  "environment": {
+    "CUDA_VISIBLE_DEVICES": "",
+    "PYTHONPATH": "/tmp/pcb-core-nested-tensor-20261027/installed-baseline",
+    "OMP_NUM_THREADS": "4",
+    "MKL_NUM_THREADS": "4",
+    "OPENBLAS_NUM_THREADS": "4"
+  },
+  "cuda_initialized": false
+}
