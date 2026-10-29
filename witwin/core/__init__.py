@@ -141,3 +141,7 @@ __all__ = [
     "reserve_structure_id",
     "reserve_surface_id",
 ]
+
+from .geometry import BooleanGeometry, Difference, Intersection, Union
+
+__all__ += ["BooleanGeometry", "Union", "Intersection", "Difference"]

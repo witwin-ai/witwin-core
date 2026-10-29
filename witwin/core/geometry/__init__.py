@@ -21,3 +21,7 @@ __all__ = [
     "Mesh",
     "Geometry",
 ]
+
+from .boolean import BooleanGeometry, Difference, Intersection, Union
+
+__all__ += ["BooleanGeometry", "Union", "Intersection", "Difference"]
