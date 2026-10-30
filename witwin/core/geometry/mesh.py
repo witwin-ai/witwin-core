@@ -239,7 +239,7 @@ def _mesh_topology_stats(vertices: np.ndarray, faces: np.ndarray) -> tuple[int, 
 
     bbox_extent = vertices.max(axis=0) - vertices.min(axis=0)
     bbox_diagonal = float(np.linalg.norm(bbox_extent))
-    area_epsilon = max((bbox_diagonal * bbox_diagonal) * 1.0e-12, np.finfo(np.float32).eps)
+    area_epsilon = (bbox_diagonal * bbox_diagonal) * 1.0e-12
 
     degenerate_faces = 0
     for tri in faces:
@@ -305,14 +305,7 @@ def _mesh_topology_stats_torch(
         triangles = vertices[face_indices]
         bbox_extent = vertices.amax(dim=0) - vertices.amin(dim=0)
         bbox_diagonal = torch.linalg.vector_norm(bbox_extent)
-        area_epsilon = torch.maximum(
-            bbox_diagonal.square() * 1.0e-12,
-            torch.tensor(
-                torch.finfo(vertices.dtype).eps,
-                device=vertices.device,
-                dtype=vertices.dtype,
-            ),
-        )
+        area_epsilon = bbox_diagonal.square() * 1.0e-12
         repeated_vertex = (
             (face_indices[:, 0] == face_indices[:, 1])
             | (face_indices[:, 1] == face_indices[:, 2])
@@ -481,9 +474,7 @@ class Mesh(GeometryBase):
                     - vertices_array.min(axis=0)
                 )
                 bbox_diagonal = float(np.linalg.norm(bbox_extent))
-            volume_epsilon = max(
-                (bbox_diagonal**3) * 1.0e-9, np.finfo(np.float32).eps
-            )
+            volume_epsilon = (bbox_diagonal**3) * 1.0e-9
             is_watertight = bool(
                 boundary_edges == 0
                 and non_manifold_edges == 0

@@ -172,6 +172,7 @@ def _signed_distance_from_unsigned_and_winding(
     winding_angle: torch.Tensor,
     winding_beta: float,
 ) -> torch.Tensor:
+    # Both winding_angle and winding_beta are angles, independent of mesh units.
     angle_threshold = unsigned_distance.new_tensor(2.0 * math.pi)
     beta = unsigned_distance.new_tensor(float(winding_beta))
     sign_factor = -torch.tanh((torch.abs(winding_angle) - angle_threshold) / beta)
@@ -279,7 +280,6 @@ def _triangle_mesh_winding_angle_torch_from_triangles(
     point_chunk = 4096 if point_chunk_size is None else int(point_chunk_size)
     triangle_chunk = 256 if triangle_chunk_size is None else int(triangle_chunk_size)
     outputs: list[torch.Tensor] = []
-    eps = torch.finfo(points.dtype).eps
 
     for point_start in range(0, points.shape[0], point_chunk):
         point_stop = min(points.shape[0], point_start + point_chunk)
@@ -294,9 +294,9 @@ def _triangle_mesh_winding_angle_torch_from_triangles(
             b = triangle_block[None, :, 1, :] - point_block_expanded
             c = triangle_block[None, :, 2, :] - point_block_expanded
 
-            la = torch.linalg.norm(a, dim=-1).clamp_min(eps)
-            lb = torch.linalg.norm(b, dim=-1).clamp_min(eps)
-            lc = torch.linalg.norm(c, dim=-1).clamp_min(eps)
+            la = torch.linalg.norm(a, dim=-1)
+            lb = torch.linalg.norm(b, dim=-1)
+            lc = torch.linalg.norm(c, dim=-1)
             numerator = _dot(a, torch.cross(b, c, dim=-1))
             denominator = (
                 la * lb * lc
@@ -304,7 +304,11 @@ def _triangle_mesh_winding_angle_torch_from_triangles(
                 + _dot(b, c) * la
                 + _dot(c, a) * lb
             )
-            total_angle = total_angle + 2.0 * torch.atan2(numerator, _safe_signed_denom(denominator, eps)).sum(dim=1)
+            # Numerator and denominator both have units of length cubed.
+            # atan2 needs no epsilon; only a query exactly on a vertex is undefined.
+            on_vertex = (la == 0.0) | (lb == 0.0) | (lc == 0.0)
+            denominator = torch.where(on_vertex, torch.ones_like(denominator), denominator)
+            total_angle = total_angle + 2.0 * torch.atan2(numerator, denominator).sum(dim=1)
 
         outputs.append(total_angle)
 
