@@ -62,8 +62,10 @@ def geometry_from_dict(d, arrays=None, device=None):
             continue
         value = _decode(d[name], arrays, device)
         if cls is Mesh and name in {"vertices", "faces"}:
-            # Tensor inputs let the constructor honor topology_diagnostics=False.
-            value = torch.as_tensor(value, device=device)
+            # Mesh stores the resolved diagnostics flag. Host arrays always run the
+            # (host-only) topology checks; device tensors with an explicit False skip them.
+            value = (torch.as_tensor(value).cpu().numpy() if d["topology_diagnostics"]
+                     else torch.as_tensor(value, device=device))
         if parameter.kind == Parameter.VAR_POSITIONAL:
             args.extend(value)
         elif parameter.kind in {Parameter.POSITIONAL_ONLY, Parameter.POSITIONAL_OR_KEYWORD}:
