@@ -27,6 +27,8 @@ STABLE_PUBLIC_API = {
     "Geometry",
     "GeometryBase",
     "GeometrySpec",
+    "geometry_from_dict",
+    "geometry_to_dict",
     "HollowBox",
     "Intersection",
     "LinearTrajectory",
