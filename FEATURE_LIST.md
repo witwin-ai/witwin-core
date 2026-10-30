@@ -1,5 +1,7 @@
 # Core feature inventory
 
+- Release 0.4.2 adds signed-distance boolean geometry composition (`Union`, `Intersection`, `Difference`, `BooleanGeometry`) and binary/ASCII STL import (`Mesh.from_stl`). Both are additive exports; existing geometry, mesh and scene contracts are unchanged, and the optional Maxwell integration still selects `witwin-maxwell>=0.5.1,<0.6`. Local wheel validation does not change an installed environment.
+
 - Release 0.4.1 includes nested-Tensor geometry ancestry and fixed assignment-control validation; the optional Maxwell integration selects `witwin-maxwell>=0.5.1,<0.6`. Its fourteen core source files preserve the qualified implementation, with only the module version constant changed. Local wheel validation does not change an installed environment.
 
 - Shared logical scenes, snapshots, material, antenna and motion contracts remain solver neutral.
