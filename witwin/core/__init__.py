@@ -1,6 +1,6 @@
 """Witwin Core - Shared geometry, material, and structure contracts."""
 
-__version__ = "0.4.3"
+__version__ = "0.4.4"
 
 from .material import (
     DispersionSpec,

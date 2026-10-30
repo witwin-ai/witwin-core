@@ -1,5 +1,7 @@
 # Core feature inventory
 
+- Release 0.4.4 adds `geometry_to_dict` / `geometry_from_dict` (and `GeometryBase.to_dict` / `from_dict`) for the `witwin.scene/1` scene dictionaries: every core geometry, meshes and boolean trees are written from their constructor parameters with defaults explicit, JSON-safe, with optional large-array references. Existing geometry behavior is unchanged.
+
 - Release 0.4.3 fixes `to_mesh()` axis remapping and outward face winding for Cone, Cylinder, Pyramid, Prism and Torus, including Prism x-axis mesh agreement with its signed distance. Z-axis vertices, faces and ordering remain bit-identical to 0.4.2.
 
 - Release 0.4.2 adds signed-distance boolean geometry composition (`Union`, `Intersection`, `Difference`, `BooleanGeometry`) and binary/ASCII STL import (`Mesh.from_stl`). Both are additive exports; existing geometry, mesh and scene contracts are unchanged, and the optional Maxwell integration still selects `witwin-maxwell>=0.5.1,<0.6`. Local wheel validation does not change an installed environment.
