@@ -1,4 +1,4 @@
-"""Triangle mesh representation with OBJ loading and topology analysis."""
+"""Triangle mesh representation with OBJ/STL loading and topology analysis."""
 
 from __future__ import annotations
 
@@ -130,6 +130,107 @@ def _load_obj(path: str | PathLike[str]) -> tuple[np.ndarray, np.ndarray]:
     if not faces:
         raise ValueError(f"OBJ file does not contain any triangular faces: {obj_path}")
     return _vertices_array(vertices), _faces_array(faces, vertex_count=len(vertices))
+
+
+# Binary STL: 80-byte header, uint32 triangle count, then 50-byte records.
+_STL_BINARY_HEADER_BYTES = 84
+_STL_BINARY_RECORD = np.dtype(
+    [("normal", "<f4", (3,)), ("vertices", "<f4", (3, 3)), ("attribute", "<u2")]
+)
+
+
+def _parse_ascii_stl(text: str, stl_path: Path) -> np.ndarray:
+    triangles: list[list[tuple[float, float, float]]] = []
+    loop: list[tuple[float, float, float]] | None = None
+    for line_no, raw_line in enumerate(text.splitlines(), start=1):
+        tokens = raw_line.split()
+        if not tokens:
+            continue
+        keyword = tokens[0].lower()
+        if keyword == "outer":
+            loop = []
+        elif keyword == "vertex":
+            if loop is None or len(tokens) != 4:
+                raise ValueError(f"Invalid STL vertex record at {stl_path}:{line_no}")
+            loop.append((float(tokens[1]), float(tokens[2]), float(tokens[3])))
+        elif keyword == "endloop":
+            if loop is None or len(loop) < 3:
+                raise ValueError(f"STL facet with fewer than three vertices at {stl_path}:{line_no}")
+            triangles.extend([loop[0], loop[index], loop[index + 1]] for index in range(1, len(loop) - 1))
+            loop = None
+    if loop is not None:
+        raise ValueError(f"Unterminated STL facet loop in {stl_path}")
+    if not triangles:
+        raise ValueError(f"STL file does not contain any triangular facets: {stl_path}")
+    return np.asarray(triangles, dtype=np.float64).astype(np.float32)
+
+
+def _read_stl_triangles(stl_path: Path) -> np.ndarray:
+    """Return the facet corners ``(T, 3, 3)`` of a binary or ASCII STL file."""
+    data = stl_path.read_bytes()
+    if len(data) >= _STL_BINARY_HEADER_BYTES:
+        count = int(np.frombuffer(data, dtype="<u4", count=1, offset=80)[0])
+        if len(data) == _STL_BINARY_HEADER_BYTES + count * _STL_BINARY_RECORD.itemsize:
+            if count == 0:
+                raise ValueError(f"STL file does not contain any triangular facets: {stl_path}")
+            records = np.frombuffer(
+                data, dtype=_STL_BINARY_RECORD, count=count, offset=_STL_BINARY_HEADER_BYTES
+            )
+            return np.array(records["vertices"], dtype=np.float32)
+    text = data.decode("utf-8", errors="ignore")
+    if not text.lstrip().lower().startswith("solid"):
+        raise ValueError(f"File is neither a binary nor an ASCII STL: {stl_path}")
+    return _parse_ascii_stl(text, stl_path)
+
+
+def _weld_stl_vertices(corners: np.ndarray, tolerance: float | None) -> tuple[np.ndarray, np.ndarray]:
+    """Merge coincident facet corners into shared vertices.
+
+    ``tolerance=None`` merges bit-identical coordinates (signed zeros are
+    unified). A positive tolerance merges corners that round to the same cell of
+    a ``tolerance``-spaced lattice and places the vertex at their mean. Vertices
+    keep first-occurrence file order; faces that collapse onto a repeated vertex
+    are dropped.
+    """
+    points = corners.reshape(-1, 3) + np.float32(0.0)
+    if tolerance is None:
+        keys = points
+    else:
+        if not tolerance > 0.0:
+            raise ValueError("weld_tolerance must be positive when provided.")
+        keys = np.round(points.astype(np.float64) / float(tolerance)).astype(np.int64)
+    _, first_index, inverse = np.unique(keys, axis=0, return_index=True, return_inverse=True)
+    inverse = inverse.reshape(-1)
+    order = np.argsort(first_index, kind="stable")
+    rank = np.empty_like(order)
+    rank[order] = np.arange(order.shape[0])
+    inverse = rank[inverse]
+    if tolerance is None:
+        vertices = points[first_index[order]]
+    else:
+        sums = np.zeros((order.shape[0], 3), dtype=np.float64)
+        np.add.at(sums, inverse, points.astype(np.float64))
+        vertices = (sums / np.bincount(inverse, minlength=order.shape[0])[:, None]).astype(np.float32)
+    faces = inverse.reshape(-1, 3).astype(np.int64)
+    distinct = (faces[:, 0] != faces[:, 1]) & (faces[:, 1] != faces[:, 2]) & (faces[:, 2] != faces[:, 0])
+    faces = faces[distinct]
+    if faces.shape[0] == 0:
+        raise ValueError("STL welding collapsed every facet; reduce weld_tolerance.")
+    used = np.zeros(vertices.shape[0], dtype=bool)
+    used[faces.reshape(-1)] = True
+    if not used.all():
+        remap = np.cumsum(used) - 1
+        vertices = vertices[used]
+        faces = remap[faces]
+    return np.ascontiguousarray(vertices, dtype=np.float32), np.ascontiguousarray(faces, dtype=np.int64)
+
+
+def _load_stl(path: str | PathLike[str], *, weld_tolerance: float | None = None) -> tuple[np.ndarray, np.ndarray]:
+    stl_path = Path(path).expanduser().resolve()
+    if not stl_path.exists():
+        raise FileNotFoundError(f"STL file not found: {stl_path}")
+    vertices, faces = _weld_stl_vertices(_read_stl_triangles(stl_path), weld_tolerance)
+    return _vertices_array(vertices), _faces_array(faces, vertex_count=vertices.shape[0])
 
 
 def _mesh_topology_stats(vertices: np.ndarray, faces: np.ndarray) -> tuple[int, int, int, int, float]:
@@ -490,6 +591,53 @@ class Mesh(GeometryBase):
         device=None,
     ) -> "Mesh":
         vertices, faces = _load_obj(path)
+        return cls(
+            vertices,
+            faces,
+            position=position,
+            scale=scale,
+            rotation=rotation,
+            recenter=recenter,
+            fill_mode=fill_mode,
+            surface_thickness=surface_thickness,
+            source_path=path,
+            topology_diagnostics=True,
+            device=device,
+        )
+
+    @classmethod
+    def from_stl(
+        cls,
+        path: str | PathLike[str],
+        *,
+        unit_scale: float = 1.0,
+        weld_tolerance: float | None = None,
+        position=(0.0, 0.0, 0.0),
+        scale=1.0,
+        rotation=None,
+        recenter: bool = True,
+        fill_mode: str = "auto",
+        surface_thickness: float | None = None,
+        device=None,
+    ) -> "Mesh":
+        """Load a binary or ASCII STL file as a welded triangle mesh.
+
+        STL stores every facet with its own corner copies; coincident corners
+        are welded into shared vertices (``weld_tolerance`` in file units, exact
+        matching by default) so the topology diagnostics see a closed surface.
+        Facet normals are ignored: orientation follows the corner winding.
+        ``unit_scale`` converts file units to scene units (e.g. ``1e-3`` for a
+        millimetre file in a metre scene). It is folded into ``scale``, so
+        ``vertices`` keep file units and the topology diagnostics run at file
+        scale; the world geometry is identical to scaling the raw vertices.
+        """
+        unit = float(unit_scale)
+        if not unit > 0.0:
+            raise ValueError("unit_scale must be positive.")
+        vertices, faces = _load_stl(path, weld_tolerance=weld_tolerance)
+        if unit != 1.0:
+            resolved_device = _resolve_device(device, position, rotation, scale, surface_thickness)
+            scale = _as_vec3(scale, device=resolved_device) * unit
         return cls(
             vertices,
             faces,
