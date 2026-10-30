@@ -193,11 +193,11 @@ def _constant_tensor(data, *, device, dtype=torch.float32) -> torch.Tensor:
 
 
 def _remap_axis_torch(vertices: torch.Tensor, axis: str) -> torch.Tensor:
-    """Remap local z-up coordinates to the requested axis."""
+    """Remap z-up vertices to the axial/radial order used by _axial_split."""
     if axis == "y":
         return vertices[:, [0, 2, 1]]
     if axis == "x":
-        return vertices[:, [2, 1, 0]]
+        return vertices[:, [2, 0, 1]]
     return vertices
 
 
@@ -286,8 +286,13 @@ class GeometryBase:
             raise ValueError("axis must be 'x', 'y', or 'z'.")
         return axis_name
 
-    def _apply_axis_transform(self, vertices: torch.Tensor, axis: str) -> torch.Tensor:
-        return _remap_axis_torch(vertices, axis)
+    def _apply_axis_transform(
+        self, vertices: torch.Tensor, faces: torch.Tensor, axis: str
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        # The y remap swaps two coordinates; x is an even cyclic permutation.
+        if axis == "y":
+            faces = faces[:, [0, 2, 1]]
+        return _remap_axis_torch(vertices, axis), faces
 
     def _transform_mesh_verts(self, vertices: torch.Tensor) -> torch.Tensor:
         if not isinstance(vertices, torch.Tensor):

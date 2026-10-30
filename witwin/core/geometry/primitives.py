@@ -199,8 +199,6 @@ class Cylinder(GeometryBase):
             torch.stack([zeros.new_zeros(()), zeros.new_zeros(()), half_height]),
         ])
         vertices = torch.cat([bottom, top, caps], dim=0)
-        vertices = self._apply_axis_transform(vertices, self.axis)
-        vertices = self._transform_mesh_verts(vertices)
         bottom_center, top_center = 2 * segments, 2 * segments + 1
         faces = []
         for index in range(segments):
@@ -211,7 +209,8 @@ class Cylinder(GeometryBase):
                 [bottom_center, next_index, index],
                 [top_center, segments + index, segments + next_index],
             ])
-        return vertices, _faces_tensor(faces, device=device)
+        vertices, faces = self._apply_axis_transform(vertices, _faces_tensor(faces, device=device), self.axis)
+        return self._transform_mesh_verts(vertices), faces
 
 
 class Ellipsoid(GeometryBase):
@@ -301,8 +300,6 @@ class Cone(GeometryBase):
         base = torch.stack([radius * cos_angles, radius * sin_angles, height.expand(segments)], dim=1)
         base_center = torch.stack([torch.stack([zeros.new_zeros(()), zeros.new_zeros(()), height])])
         vertices = torch.cat([apex, base, base_center], dim=0)
-        vertices = self._apply_axis_transform(vertices, self.axis)
-        vertices = self._transform_mesh_verts(vertices)
         apex_index, base_center_index = 0, segments + 1
         faces = []
         for index in range(segments):
@@ -310,7 +307,8 @@ class Cone(GeometryBase):
             v0 = 1 + index
             v1 = 1 + next_index
             faces.extend([[apex_index, v1, v0], [base_center_index, v0, v1]])
-        return vertices, _faces_tensor(faces, device=device)
+        vertices, faces = self._apply_axis_transform(vertices, _faces_tensor(faces, device=device), self.axis)
+        return self._transform_mesh_verts(vertices), faces
 
 
 class Pyramid(GeometryBase):
@@ -344,13 +342,16 @@ class Pyramid(GeometryBase):
             torch.stack([half_size, half_size, height]),
             torch.stack([-half_size, half_size, height]),
         ])
-        vertices = self._apply_axis_transform(vertices, self.axis)
-        vertices = self._transform_mesh_verts(vertices)
         faces = _faces_tensor([[0, 2, 1], [0, 3, 2], [0, 4, 3], [0, 1, 4], [1, 2, 3], [1, 3, 4]], device=device)
-        return vertices, faces
+        vertices, faces = self._apply_axis_transform(vertices, faces, self.axis)
+        return self._transform_mesh_verts(vertices), faces
 
 
 class Prism(GeometryBase):
+    """Regular prism with polygon coordinates (x, y), (x, z), or (y, z)
+    for the z, y, or x axis, respectively; the first corner is at (radius, 0).
+    """
+
     kind = "prism"
 
     def __init__(self, position=(0, 0, 0), radius=1.0, height=1.0, num_sides=6, axis="z", rotation=None, *, device=None):
@@ -392,8 +393,6 @@ class Prism(GeometryBase):
             torch.stack([zero, zero, half_height]),
         ])
         vertices = torch.cat([bottom, top, caps], dim=0)
-        vertices = self._apply_axis_transform(vertices, self.axis)
-        vertices = self._transform_mesh_verts(vertices)
         bottom_center, top_center = 2 * side_count, 2 * side_count + 1
         faces = []
         for index in range(side_count):
@@ -404,7 +403,8 @@ class Prism(GeometryBase):
                 [bottom_center, next_index, index],
                 [top_center, side_count + index, side_count + next_index],
             ])
-        return vertices, _faces_tensor(faces, device=device)
+        vertices, faces = self._apply_axis_transform(vertices, _faces_tensor(faces, device=device), self.axis)
+        return self._transform_mesh_verts(vertices), faces
 
 
 class Torus(GeometryBase):
@@ -449,8 +449,6 @@ class Torus(GeometryBase):
             ring_radius * vertices[:, 4],
             minor_radius * vertices[:, 2],
         ], dim=1)
-        vertices = self._apply_axis_transform(vertices, self.axis)
-        vertices = self._transform_mesh_verts(vertices)
         faces = []
         for major in range(major_segments):
             next_major = (major + 1) % major_segments
@@ -461,7 +459,8 @@ class Torus(GeometryBase):
                 v2 = next_major * minor_segments + minor
                 v3 = next_major * minor_segments + next_minor
                 faces.extend([[v0, v2, v1], [v1, v2, v3]])
-        return vertices, _faces_tensor(faces, device=device)
+        vertices, faces = self._apply_axis_transform(vertices, _faces_tensor(faces, device=device), self.axis)
+        return self._transform_mesh_verts(vertices), faces
 
 
 class HollowBox(GeometryBase):
