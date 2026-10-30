@@ -143,5 +143,9 @@ __all__ = [
 ]
 
 from .geometry import BooleanGeometry, Difference, Intersection, Union
+from .geometry.serialize import geometry_from_dict, geometry_to_dict
 
-__all__ += ["BooleanGeometry", "Union", "Intersection", "Difference"]
+__all__ += [
+    "BooleanGeometry", "Union", "Intersection", "Difference",
+    "geometry_to_dict", "geometry_from_dict",
+]

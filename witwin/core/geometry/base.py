@@ -273,6 +273,17 @@ class GeometryBase:
     def device(self):
         return self.position.device
 
+    def to_dict(self, arrays=None) -> dict:
+        from .serialize import geometry_to_dict
+
+        return geometry_to_dict(self, arrays=arrays)
+
+    @classmethod
+    def from_dict(cls, d, arrays=None, device=None):
+        from .serialize import geometry_from_dict
+
+        return geometry_from_dict(d, arrays=arrays, device=device)
+
     def _local_coords(self, xx, yy, zz):
         return _rotate_coords(xx, yy, zz, self.position, self.rotation)
 
