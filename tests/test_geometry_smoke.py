@@ -58,11 +58,13 @@ def test_geometry_construction_to_mesh_and_to_mask(geometry, segments, inside_po
         torch.tensor(inside_point[0]),
         torch.tensor(inside_point[1]),
         torch.tensor(inside_point[2]),
+        beta=0.05 * (2.0 / 32),
     ).item()
     outside_value = geometry.to_mask(
         torch.tensor(outside_point[0]),
         torch.tensor(outside_point[1]),
         torch.tensor(outside_point[2]),
+        beta=0.05 * (2.0 / 32),
     ).item()
 
     assert occupancy.dtype.is_floating_point

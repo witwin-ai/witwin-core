@@ -1,5 +1,7 @@
 # Core feature inventory
 
+- Release 0.4.6 fixes occupancy smoothing scale correctness: micrometre-scale positive `beta` lengths are no longer clamped to dimensionless machine epsilon; metre-scale smoothing values and gradients are unchanged. The floor is now `finfo.tiny`, solely a divide-by-zero guard. Queries with no coordinate spacing must supply an explicit `beta` in metres instead of receiving a fixed `1e-3 m` fallback. Below `sqrt(finfo.tiny)` (about `1.08e-19` for float32 and `1.49e-154` for float64), occupancy warns and uses a hard step with half occupancy at the surface and zero distance, offset and beta gradients, avoiding near-surface gradient overflow while preserving downstream density gradients. Boolean `smoothness` is documented as an absolute length in metres.
+
 - Release 0.4.5 fixes scale-dependent solid-mesh winding signs and topology tolerances. Signed distances near the surface of affected meshes change with the corrected winding sign factor; unsigned distances are unchanged.
 
 - Release 0.4.4 adds `geometry_to_dict` / `geometry_from_dict` (and `GeometryBase.to_dict` / `from_dict`) for the `witwin.scene/1` scene dictionaries: every core geometry, meshes and boolean trees are written from their constructor parameters with defaults explicit, JSON-safe, with optional large-array references. Existing geometry behavior is unchanged.

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from typing import Protocol, runtime_checkable
 
 import numpy as np
@@ -222,7 +223,10 @@ def _default_beta_from_coords(xx, yy, zz, *, reference: torch.Tensor) -> torch.T
         if spacing is not None
     ]
     if not spacings:
-        return reference.new_tensor(1.0e-3)
+        raise ValueError(
+            "Cannot infer beta without coordinate spacing; pass an explicit "
+            "beta (a smoothing length in metres) for point-like queries."
+        )
 
     spacing = spacings[0].to(device=reference.device, dtype=reference.dtype)
     for candidate in spacings[1:]:
@@ -235,13 +239,39 @@ def _resolve_beta(beta, xx, yy, zz, *, reference: torch.Tensor) -> torch.Tensor:
         resolved = _default_beta_from_coords(xx, yy, zz, reference=reference)
     else:
         resolved = torch.as_tensor(beta, device=reference.device, dtype=reference.dtype)
-    return torch.clamp(resolved, min=torch.finfo(reference.dtype).eps)
+    # Beta is a length: dimensionless eps would broaden positive, small-scale
+    # smoothing widths. tiny is only a divide-by-zero guard.
+    return torch.clamp(resolved, min=torch.finfo(reference.dtype).tiny)
 
 
 def occupancy_from_signed_distance(signed_distance: torch.Tensor, *, xx, yy, zz, offset=0.0, beta=None) -> torch.Tensor:
+    """Soft occupancy with offset and beta expressed as lengths in metres.
+
+    With beta=None, use 5% of the smallest coordinate spacing; queries without
+    spacing must supply beta. Below sqrt(finfo(dtype).tiny), use a hard step
+    (0.5 on the surface) and warn. Its distance, offset and beta gradients are
+    zero; downstream density gradients remain available. This threshold bounds
+    the reciprocal width by 1/sqrt(tiny), leaving substantial headroom for
+    upstream gradient amplification instead of overflowing near the surface.
+    """
     offset_tensor = torch.as_tensor(offset, device=signed_distance.device, dtype=signed_distance.dtype)
     beta_tensor = _resolve_beta(beta, xx, yy, zz, reference=signed_distance)
+    hard = beta_tensor < torch.finfo(signed_distance.dtype).tiny ** 0.5
+    use_hard = bool(hard.any())
+    if use_hard:
+        warnings.warn(
+            "beta below sqrt(finfo(dtype).tiny): using hard occupancy with zero "
+            "distance, offset and beta gradients to avoid gradient overflow.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        # Do not evaluate the tiny division even in an unselected where branch:
+        # its backward can overflow and contaminate zero geometry gradients.
+        beta_tensor = torch.where(hard, torch.ones_like(beta_tensor), beta_tensor)
     occupancy = 0.5 * (1.0 - torch.tanh((signed_distance - offset_tensor) / beta_tensor))
+    if use_hard:
+        step = 0.5 * (1.0 - torch.sign(signed_distance - offset_tensor))
+        occupancy = torch.where(hard, step, occupancy)
     return occupancy.clamp(0.0, 1.0)
 
 
@@ -322,6 +352,11 @@ class GeometryBase:
         raise NotImplementedError
 
     def to_mask(self, xx, yy, zz, offset=0.0, beta=None):
+        """Occupancy with offset and beta expressed as lengths in metres.
+
+        See :func:`occupancy_from_signed_distance` for coordinate spacing
+        requirements and the near-zero-beta gradient guard.
+        """
         signed_distance = self.signed_distance(xx, yy, zz)
         return occupancy_from_signed_distance(
             signed_distance,

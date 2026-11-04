@@ -195,6 +195,8 @@ class BooleanGeometry(GeometryBase):
     attributes of the node, so consumers that discover a geometry's parameters
     from its tensor attributes (device placement, trainability checks, adjoint
     registration) see the full tree.
+
+    ``smoothness`` is an absolute blend length in metres, not a relative factor.
     """
 
     kind = "boolean"
@@ -347,7 +349,10 @@ class Intersection(BooleanGeometry):
 
 
 class Difference(BooleanGeometry):
-    """``base`` minus the union of ``tools``."""
+    """``base`` minus the union of ``tools``.
+
+    ``smoothness`` is an absolute blend length in metres, not a relative factor.
+    """
 
     kind = "difference"
     _minimum_children = 2
