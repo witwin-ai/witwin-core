@@ -28,7 +28,8 @@ def _polygon_edge_distance_sq_2d(
         edges = torch.roll(polygon, shifts=-1, dims=0) - polygon
     if rel is None:
         rel = points[:, None, :] - polygon[None, :, :]
-    edge_norm_sq = torch.sum(edges**2, dim=-1).clamp_min(torch.finfo(points.dtype).eps)
+    # tiny is only a zero-length-edge guard; eps would clamp real sub-millimetre float32 edges.
+    edge_norm_sq = torch.sum(edges**2, dim=-1).clamp_min(torch.finfo(points.dtype).tiny)
     t = torch.clamp(
         torch.sum(rel * edges[None, :, :], dim=-1) / edge_norm_sq[None, :], 0.0, 1.0
     )
@@ -73,7 +74,7 @@ def _polygon_crossing_count_2d(
     pu = points[:, 0:1]
     pv = points[:, 1:2]
     straddles = (start[None, :, 1] <= pv) != (end[None, :, 1] <= pv)
-    denom = _safe_signed_denom(end[:, 1] - start[:, 1], torch.finfo(points.dtype).eps)
+    denom = _safe_signed_denom(end[:, 1] - start[:, 1], torch.finfo(points.dtype).tiny)
     t = (pv - start[None, :, 1]) / denom[None, :]
     crossing_u = start[None, :, 0] + t * (end[:, 0] - start[:, 0])[None, :]
     return (straddles & (pu < crossing_u)).sum(dim=1)
