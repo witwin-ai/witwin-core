@@ -136,9 +136,9 @@ def test_serialization_round_trip_keeps_fields():
     geometry = ExtrudedPolygon(torch.tensor(L_SHAPE, dtype=torch.float64), height=0.4, axis="y", **FRAME)
     rebuilt = geometry_from_dict(geometry_to_dict(geometry))
     assert type(rebuilt) is ExtrudedPolygon and rebuilt.axis == "y"
-    torch.testing.assert_close(rebuilt.vertices, geometry.vertices.float(), rtol=0, atol=1e-7)
+    assert rebuilt.vertices.dtype == torch.float64 and torch.equal(rebuilt.vertices, geometry.vertices)
     points = _points(seed=2)
-    torch.testing.assert_close(rebuilt.signed_distance(*points), geometry.signed_distance(*points).float(), rtol=0, atol=1e-6)
+    assert torch.equal(rebuilt.signed_distance(*points), geometry.signed_distance(*points))
 
 
 def test_occupancy_gradients_reach_vertices_height_position_and_rotation():
