@@ -22,6 +22,7 @@ STABLE_PUBLIC_API = {
     "DispersionSpec",
     "DynamicScene",
     "Ellipsoid",
+    "ExtrudedPolygon",
     "EndpointState",
     "FrequencyMaterialSample",
     "Geometry",

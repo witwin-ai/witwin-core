@@ -11,10 +11,18 @@ from .base import (
     _as_vec3,
     _axial_split,
     _constant_tensor,
+    _remap_axis_torch,
     _resolve_device,
+    _stack_scalar_sequence,
 )
 from .mesh_sdf import triangle_mesh_unsigned_distance
-from .polygon import _safe_signed_denom, convex_polygon_signed_distance_2d
+from .polygon import (
+    _safe_signed_denom,
+    convex_polygon_signed_distance_2d,
+    ear_clip_triangles_2d,
+    polygon_loops_signed_distance_2d,
+    simple_polygon_orientation_2d,
+)
 
 
 def _faces_tensor(data, *, device) -> torch.Tensor:
@@ -495,3 +503,103 @@ class HollowBox(GeometryBase):
             torch.cat([outer_vertices, inner_vertices], dim=0),
             torch.cat([outer_faces, inner_faces + outer_vertices.shape[0]], dim=0),
         )
+
+
+def _as_polygon_vertices(value, *, device=None) -> torch.Tensor:
+    """(N, 2) vertex tensor that keeps authored tensor rows (autograd, promoted dtype, device).
+
+    Python-only input converts to float32, like the other primitive dimensions.
+    """
+    if isinstance(value, torch.Tensor):
+        _resolve_device(device, value)
+        vertices = value
+    else:
+        rows = [list(row) for row in value]
+        stacked = [_stack_scalar_sequence(row, device=device) for row in rows]
+        if any(row is not None for row in stacked):
+            tensors = [row for row in stacked if row is not None]
+            dtype = tensors[0].dtype
+            for tensor in tensors[1:]:
+                dtype = torch.promote_types(dtype, tensor.dtype)
+            target = _resolve_device(device, *tensors)
+            vertices = torch.stack([
+                row.to(dtype=dtype) if row is not None
+                else torch.tensor([float(v) for v in values], dtype=dtype, device=target)
+                for row, values in zip(stacked, rows)
+            ])
+        else:
+            vertices = torch.tensor([[float(v) for v in row] for row in rows], dtype=torch.float32, device=device)
+    if vertices.ndim != 2 or vertices.shape[1] != 2:
+        raise ValueError("vertices must have shape (N, 2).")
+    return vertices
+
+
+class ExtrudedPolygon(GeometryBase):
+    """Straight extrusion of a simple polygon along a local axis.
+
+    ``vertices`` (N, 2) are the cross-section in the local plane perpendicular
+    to ``axis``, relative to ``position``, with Prism's plane coordinates
+    (x, y), (x, z) or (y, z) for the z, y or x axis. The solid spans
+    ``height`` centred on ``position`` along the axis, then ``rotation`` is
+    applied about ``position``. The polygon must be simple (no self-contact);
+    either winding is accepted, convex or not. Prism(radius, num_sides) equals
+    ExtrudedPolygon with its regular N-gon vertices.
+    """
+
+    kind = "extruded_polygon"
+
+    def __init__(self, vertices, height=1.0, position=(0, 0, 0), axis="z", rotation=None, *, device=None):
+        resolved_device = _resolve_device(device, position, rotation, vertices, height)
+        super().__init__(position=position, rotation=rotation, device=resolved_device)
+        self.vertices: torch.Tensor = _as_polygon_vertices(vertices, device=resolved_device)
+        self.height: torch.Tensor = _as_scalar(height, device=resolved_device)
+        self.axis: str = self._validate_axis(axis)
+        signed_area = simple_polygon_orientation_2d(self.vertices.detach().cpu().to(torch.float64).numpy())
+        self._counter_clockwise = signed_area > 0.0
+
+    def signed_distance(self, xx, yy, zz):
+        dx, dy, dz = self._local_coords(xx, yy, zz)
+        axial, pu, pv = _axial_split(dx, dy, dz, self.axis)
+        polygon = self.vertices.to(device=pu.device, dtype=pu.dtype)
+        points = torch.stack([pu, pv], dim=-1).reshape(-1, 2)
+        polygon_distance = polygon_loops_signed_distance_2d(points, [polygon]).reshape(pu.shape)
+        axial_distance = torch.abs(axial) - self.height.to(device=axial.device, dtype=axial.dtype) / 2
+        outside = torch.sqrt(torch.clamp(polygon_distance, min=0.0) ** 2 + torch.clamp(axial_distance, min=0.0) ** 2)
+        inside = torch.clamp(torch.maximum(polygon_distance, axial_distance), max=0.0)
+        return outside + inside
+
+    def _local_rings(self, dtype):
+        """Counter-clockwise ring (N, 2) and z-up local vertices (2N, 3): bottom ring, then top ring."""
+        ring = self.vertices.to(dtype=dtype)
+        if not self._counter_clockwise:
+            ring = torch.flip(ring, dims=(0,))
+        half_height = self.height.to(device=ring.device, dtype=dtype) / 2
+        count = ring.shape[0]
+        bottom = torch.cat([ring, (-half_height).expand(count)[:, None]], dim=1)
+        top = torch.cat([ring, half_height.expand(count)[:, None]], dim=1)
+        return ring, torch.cat([bottom, top], dim=0)
+
+    @property
+    def bounds_world(self) -> torch.Tensor:
+        """World axis-aligned bounds (2, 3) (min row, max row); exact for the rotated polyhedron."""
+        dtype = torch.promote_types(torch.promote_types(self.vertices.dtype, self.height.dtype), self.position.dtype)
+        _, local = self._local_rings(dtype)
+        world = self._transform_mesh_verts(_remap_axis_torch(local, self.axis))
+        return torch.stack((world.amin(dim=0), world.amax(dim=0)))
+
+    def to_mesh(self, segments=16):
+        del segments
+        ring, vertices = self._local_rings(torch.float32)
+        count = ring.shape[0]
+        faces = []
+        for index in range(count):
+            next_index = (index + 1) % count
+            faces.extend([
+                [index, next_index, count + next_index],
+                [index, count + next_index, count + index],
+            ])
+        for i0, i1, i2 in ear_clip_triangles_2d(ring.detach().cpu().to(torch.float64).numpy()):
+            faces.append([i0, i2, i1])
+            faces.append([count + i0, count + i1, count + i2])
+        vertices, faces = self._apply_axis_transform(vertices, _faces_tensor(faces, device=vertices.device), self.axis)
+        return self._transform_mesh_verts(vertices), faces

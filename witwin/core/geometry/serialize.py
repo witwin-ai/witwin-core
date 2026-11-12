@@ -9,11 +9,11 @@ import torch
 from .base import GeometryBase, _rotation_quaternion
 from .boolean import Difference, Intersection, Union
 from .mesh import Mesh
-from .primitives import Box, Cone, Cylinder, Ellipsoid, HollowBox, Prism, Pyramid, Sphere, Torus
+from .primitives import Box, Cone, Cylinder, Ellipsoid, ExtrudedPolygon, HollowBox, Prism, Pyramid, Sphere, Torus
 
 
 _GEOMETRY_TYPES = (
-    Box, Sphere, Cylinder, Ellipsoid, Cone, Pyramid, Prism, Torus, HollowBox,
+    Box, Sphere, Cylinder, Ellipsoid, Cone, Pyramid, Prism, ExtrudedPolygon, Torus, HollowBox,
     Mesh, Union, Intersection, Difference,
 )
 _TYPES_BY_KIND = {cls.kind: cls for cls in _GEOMETRY_TYPES}

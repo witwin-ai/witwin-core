@@ -12,7 +12,7 @@ in a new module `witwin/core/geometry/serialize.py`, exported from `witwin.core`
 classmethod that dispatches on `d["type"]`), both delegating to the module.
 
 Types: every `GeometryBase` subclass in `witwin/core/geometry/` today: Box, Sphere, Cylinder,
-Ellipsoid, Cone, Pyramid, Prism, Torus, HollowBox, Mesh, and the boolean geometries Union,
+Ellipsoid, Cone, Pyramid, Prism, ExtrudedPolygon, Torus, HollowBox, Mesh, and the boolean geometries Union,
 Intersection and Difference, which serialize their operand geometries recursively. Any other
 subclass raises `TypeError("not in witwin.scene/1: <class>")`.
 

@@ -2,9 +2,9 @@
 
 from .base import GeometryBase, GeometrySpec
 from .mesh import Mesh
-from .primitives import Box, Cone, Cylinder, Ellipsoid, HollowBox, Prism, Pyramid, Sphere, Torus
+from .primitives import Box, Cone, Cylinder, Ellipsoid, ExtrudedPolygon, HollowBox, Prism, Pyramid, Sphere, Torus
 
-Geometry = Box | Sphere | Cylinder | Cone | Ellipsoid | Pyramid | Prism | Torus | HollowBox | Mesh
+Geometry = Box | Sphere | Cylinder | Cone | Ellipsoid | Pyramid | Prism | ExtrudedPolygon | Torus | HollowBox | Mesh
 
 __all__ = [
     "GeometryBase",
@@ -16,6 +16,7 @@ __all__ = [
     "Ellipsoid",
     "Pyramid",
     "Prism",
+    "ExtrudedPolygon",
     "Torus",
     "HollowBox",
     "Mesh",
