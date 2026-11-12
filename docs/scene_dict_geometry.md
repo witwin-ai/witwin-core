@@ -27,10 +27,29 @@ subclass raises `TypeError("not in witwin.scene/1: <class>")`.
   even when it equals the default. No hand-maintained key lists: the serializer derives the key
   set from the signature, and a parameter without a readable attribute is an error found by the
   round-trip test, not skipped.
-- Floats are Python floats, vectors are lists, tensors are lists. With `arrays` (a dict) given,
-  any tensor with more than 4096 elements is stored as `{"array": "<key>"}` and the tensor goes to
-  `arrays[key]` (keys unique within one call, e.g. a path such as `"geometry/0/vertices"`).
-  `from_dict` resolves the same references from `arrays`.
+- Python floats stay Python floats. Every tensor field (position, rotation, size, radius,
+  smoothness, Mesh vertices and faces, ...) is written inline as
+  `{"type": "Tensor", "dtype": "<torch dtype name>", "values": <nested lists>}`, the encoding
+  witwin-maxwell uses for its other tensors; JSON writes the values at full precision, so
+  `from_dict` rebuilds each tensor with the same dtype and bit-identical values. With `arrays` (a
+  dict) given, any tensor with more than 4096 elements is stored as `{"array": "<key>"}` and the
+  tensor goes to `arrays[key]` (keys unique within one call, e.g. a path such as
+  `"geometry/0/vertices"`). `from_dict` resolves the same references from `arrays`.
+- A boolean geometry built with a Python `smoothness <= 0` (a hard boolean) writes `smoothness` as a
+  Python float, because a tensor smoothness makes the constructor smooth.
+- Mesh rebuild: with `topology_diagnostics` true and float32 vertices, `from_dict` passes host arrays
+  (the host topology path, which stores float32 vertices); any other vertex dtype was tensor-authored
+  and is passed as tensors with the recorded `topology_diagnostics`.
+- Documents written before dtype tags (core <= 0.4.6 as first released) carry inline tensors as bare
+  lists or numbers. Those writers emitted every element through `Tensor.tolist()`, i.e. as Python
+  floats that JSON stores exactly. `from_dict` recognizes such a geometry record (no field carries a
+  `Tensor` tag) and reads each bare numeric field by this rule: if any value is not exactly
+  representable in float32 the field came from a float64 tensor and is rebuilt as float64 with the
+  same values; otherwise the value goes to the constructor unchanged, exactly as before (Python
+  floats to float32, integer lists to int64). Old documents therefore rebuild every value exactly;
+  only a float64 field whose values float32 also represents (for example an all-zero position) and an
+  int32 integer list come back as float32 and int64, and a bare `Mesh.surface_thickness` is a
+  Python float, or a float64 0-d tensor when float32 cannot represent it.
 - Mesh: serialize the raw authored vertices and the actual constructor fields (scale, recenter,
   position, rotation, fill_mode, surface_thickness, topology_diagnostics), so `from_dict` reruns
   the same constructor path and rebuilds identical geometry. `source_path` is written as provenance
