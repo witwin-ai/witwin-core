@@ -75,6 +75,21 @@ def test_nonconvex_signed_distance_is_exact():
         assert value == pytest.approx(expected, abs=1e-12), point
 
 
+@pytest.mark.parametrize("dtype,rel", [(torch.float64, 1e-12), (torch.float32, 2e-6)])
+@pytest.mark.parametrize("scale", [1e-9, 1e-6, 1.0, 1e3])
+def test_signed_distance_is_scale_free(dtype, rel, scale):
+    """Exact distances and signs for a hexagon at any length scale, float32 included.
+
+    Inside at 0.5 R: nearest edge at 0.433 R (the cap is at 0.5 R); outside: nearest vertex.
+    """
+    angles = torch.linspace(0, 2 * np.pi, 7, dtype=torch.float64)[:-1]
+    vertices = (torch.stack([torch.cos(angles), torch.sin(angles)], dim=1) * scale).to(dtype)
+    geometry = ExtrudedPolygon(vertices, height=torch.tensor(scale, dtype=dtype))
+    for x, expected in ((0.5, -0.25 * math.sqrt(3)), (2.0, 1.0), (10.0, 9.0), (1000.0, 999.0)):
+        value = geometry.signed_distance(*(torch.tensor(v * scale, dtype=dtype) for v in (x, 0.0, 0.0))).item()
+        assert value == pytest.approx(expected * scale, rel=rel), (x, value / scale)
+
+
 def test_box_cross_section_matches_box_signed_distance():
     geometry = ExtrudedPolygon([(-0.5, -0.4), (0.5, -0.4), (0.5, 0.4), (-0.5, 0.4)], height=0.6, **FRAME)
     box = Box(size=(1.0, 0.8, 0.6), **FRAME)

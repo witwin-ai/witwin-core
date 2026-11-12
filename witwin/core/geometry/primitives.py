@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+
 import numpy as np
 import torch
 
@@ -554,15 +556,20 @@ class ExtrudedPolygon(GeometryBase):
         self.vertices: torch.Tensor = _as_polygon_vertices(vertices, device=resolved_device)
         self.height: torch.Tensor = _as_scalar(height, device=resolved_device)
         self.axis: str = self._validate_axis(axis)
-        signed_area = simple_polygon_orientation_2d(self.vertices.detach().cpu().to(torch.float64).numpy())
+        host = self.vertices.detach().cpu().to(torch.float64).numpy()
+        signed_area = simple_polygon_orientation_2d(host)
         self._counter_clockwise = signed_area > 0.0
+        # Power-of-two length unit of the cross-section: the shared 2D distance helpers clamp
+        # squared edge lengths and crossing denominators at finfo.eps, so they are evaluated on
+        # unit-scale coordinates. Scaling by a power of two is exact.
+        self._unit = 2.0 ** round(math.log2(float(np.ptp(host, axis=0).max())))
 
     def signed_distance(self, xx, yy, zz):
         dx, dy, dz = self._local_coords(xx, yy, zz)
         axial, pu, pv = _axial_split(dx, dy, dz, self.axis)
-        polygon = self.vertices.to(device=pu.device, dtype=pu.dtype)
-        points = torch.stack([pu, pv], dim=-1).reshape(-1, 2)
-        polygon_distance = polygon_loops_signed_distance_2d(points, [polygon]).reshape(pu.shape)
+        polygon = self.vertices.to(device=pu.device, dtype=pu.dtype) / self._unit
+        points = torch.stack([pu, pv], dim=-1).reshape(-1, 2) / self._unit
+        polygon_distance = polygon_loops_signed_distance_2d(points, [polygon]).reshape(pu.shape) * self._unit
         axial_distance = torch.abs(axial) - self.height.to(device=axial.device, dtype=axial.dtype) / 2
         outside = torch.sqrt(torch.clamp(polygon_distance, min=0.0) ** 2 + torch.clamp(axial_distance, min=0.0) ** 2)
         inside = torch.clamp(torch.maximum(polygon_distance, axial_distance), max=0.0)
