@@ -52,10 +52,15 @@ def convex_polygon_signed_distance_2d(
 
     polygon_area = 0.5 * torch.sum(_cross_2d(polygon, next_polygon))
     crosses = _cross_2d(edges[None, :, :], rel)
+    # cross_k = |e_k| * (signed distance to edge line k), so the inside tolerance is a length
+    # (1e-7 of the polygon diameter) times |e_k|: scale-free, unlike an absolute cross bound.
+    detached = polygon.detach()
+    diameter = (detached.amax(dim=0) - detached.amin(dim=0)).max()
+    tolerance = 1.0e-7 * diameter * torch.linalg.vector_norm(edges.detach(), dim=-1)
     if polygon_area.detach().item() >= 0.0:
-        inside = torch.all(crosses >= -1.0e-7, dim=1)
+        inside = torch.all(crosses >= -tolerance[None, :], dim=1)
     else:
-        inside = torch.all(crosses <= 1.0e-7, dim=1)
+        inside = torch.all(crosses <= tolerance[None, :], dim=1)
     return torch.where(inside, -dist, dist)
 
 
